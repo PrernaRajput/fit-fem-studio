@@ -3,7 +3,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Calendar } from 'lucide-react';
+import { Calendar, Footprints } from 'lucide-react';
 
 export function Hero() {
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-image');
@@ -41,6 +41,12 @@ export function Hero() {
                 <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6">
                     Track Nutrition
                 </Button>
+            </Link>
+            <Link href="/activity">
+              <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6">
+                  <Footprints className="h-6 w-6 mr-2" />
+                  Track Activity
+              </Button>
             </Link>
              <Link href="/progress">
                 <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6 aspect-square">
