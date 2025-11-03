@@ -293,8 +293,61 @@ export function ActivityTracker() {
                         <AlertTitle>Log Your Period</AlertTitle>
                         <AlertDescription>
                             Tap on a day to log your period. This helps predict your next cycle. Your next predicted period starts in {28 - dayInCycle} days.
-                        </Alergument and a `RecommendCaloriesOutput` return type. This flow encapsulates the logic for calculating the user's recommended daily calorie intake based on their profile and goals, providing a structured and reusable way to perform this calculation.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+            </Card>
 
-The `ai-calorie-burn-tracking.ts` file defines a Genkit flow for calculating calorie burn per exercise. It includes an exported function `calculateCalorieBurn` that takes a `CalculateCalorieBurnInput` argument and a `CalculateCalorieBurnOutput` return type. This flow calculates the estimated calories burned during an exercise based on the provided information, using a formula that incorporates MET value, user weight, and duration.
-
-Finally, the `food-logger.tsx` component is updated to import and use the `recommendCalories` flow. It includes a dialog for updating user profile information and a button that, when clicked, triggers the `handleGoalUpdate` function to fetch the recommended calorie budget from the AI flow and update the UI accordingly. This integration allows the app to provide personalized calorie recommendations based on the user's specific details and goals.
+            <Card className="overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                        <Ruler className="h-7 w-7" />
+                        Body Measurements
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {bodyMeasurements.map((measurement, index) => (
+                        <div key={index} className="flex justify-between items-center bg-muted/50 p-3 rounded-lg">
+                            <span className="font-medium text-muted-foreground">{measurement.name}</span>
+                            <span className="font-bold text-lg text-primary">{measurement.value} {measurement.unit}</span>
+                        </div>
+                    ))}
+                </CardContent>
+                <CardFooter>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Ruler className="mr-2 h-4 w-4" />
+                                Update Measurements
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Update Your Measurements</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                {tempMeasurements.map((measurement, index) => (
+                                    <div key={index} className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor={`measurement-${index}`} className="text-right">
+                                            {measurement.name}
+                                        </Label>
+                                        <Input
+                                            id={`measurement-${index}`}
+                                            value={measurement.value}
+                                            onChange={(e) => handleMeasurementChange(index, e.target.value)}
+                                            className="col-span-2"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <DialogClose asChild>
+                                <Button onClick={saveMeasurements} className="w-full">Save Measurements</Button>
+                            </DialogClose>
+                        </DialogContent>
+                    </Dialog>
+                </CardFooter>
+            </Card>
+        </div>
+    </div>
+  );
+}
