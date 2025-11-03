@@ -11,18 +11,19 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from './ui/button';
-import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import {
     ChartContainer,
     ChartTooltipContent,
   } from "@/components/ui/chart"
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Separator } from './ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from './ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays } from 'date-fns';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
+import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays, getMonth } from 'date-fns';
+import { Carousel, CarouselContent, CarouselItem } from './ui/carousel';
 import { cn } from '@/lib/utils';
 
 
@@ -62,6 +63,13 @@ const getCyclePhase = (cycleDay: number) => {
     if (cycleDay >= 16 && cycleDay <= 28) return { name: 'Luteal', color: 'bg-pink-400/30' };
     return { name: 'Unknown', color: 'bg-muted' };
 };
+
+const cyclePhases = [
+    { name: 'Menstrual', color: 'bg-red-400/30' },
+    { name: 'Follicular', color: 'bg-green-400/30' },
+    { name: 'Ovulation', color: 'bg-blue-400/30' },
+    { name: 'Luteal', color: 'bg-pink-400/30' },
+];
 
 
 export function ActivityTracker() {
@@ -105,6 +113,24 @@ export function ActivityTracker() {
       };
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(displayWeek, i));
+
+    const DayWithCycleColor = ({ date, displayMonth }: { date: Date; displayMonth: Date }) => {
+        const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, date));
+        const dayOfCycle = differenceInCalendarDays(date, cycleStartDay) % 28 + 1;
+        const phaseForDay = getCyclePhase(dayOfCycle);
+        const isCurrentMonth = getMonth(date) === getMonth(displayMonth);
+    
+        return (
+          <div className={cn(
+            "relative h-9 w-9 flex items-center justify-center rounded-md",
+            isPeriodDay ? 'bg-accent text-accent-foreground' : phaseForDay.color,
+            !isCurrentMonth && "text-muted-foreground opacity-50",
+            isSameDay(date, new Date()) && "ring-2 ring-primary"
+          )}>
+            {format(date, 'd')}
+          </div>
+        );
+      };
 
   return (
     <div className="container mx-auto px-4">
@@ -231,10 +257,27 @@ export function ActivityTracker() {
 
             <Card className="overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
-                        <CalendarHeart className="h-7 w-7" />
-                        Cycle Tracking
-                    </CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                            <CalendarHeart className="h-7 w-7" />
+                            Cycle Tracking
+                        </CardTitle>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <CalendarIcon className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={currentDate}
+                                    components={{ Day: DayWithCycleColor }}
+                                    className="rounded-md border"
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className={cn("text-center p-4 rounded-lg", currentPhase.color)}>
@@ -243,10 +286,7 @@ export function ActivityTracker() {
                     </div>
 
                     <div className="relative">
-                        <Carousel opts={{
-                            align: "start",
-                            dragFree: true,
-                        }}>
+                        <Carousel opts={{ align: "start", dragFree: true }}>
                             <CarouselContent className="-ml-4">
                                 {weekDays.map((day, index) => {
                                     const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, day));
@@ -255,7 +295,7 @@ export function ActivityTracker() {
                                     const phaseForBubble = getCyclePhase(dayOfCycleForBubble);
                                     
                                     return (
-                                        <CarouselItem key={index} className="basis-1/7 pl-4">
+                                        <CarouselItem key={index} className="basis-[14.28%] pl-4">
                                             <div 
                                                 className="flex flex-col items-center justify-center cursor-pointer space-y-1"
                                                 onClick={() => handleLogPeriod(day)}
@@ -286,6 +326,19 @@ export function ActivityTracker() {
                                 </Button>
                             </div>
                         </Carousel>
+                    </div>
+
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                        {cyclePhases.map(phase => (
+                            <div key={phase.name} className="flex items-center gap-2">
+                                <div className={cn("w-3 h-3 rounded-full", phase.color)} />
+                                <span>{phase.name}</span>
+                            </div>
+                        ))}
+                         <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-accent" />
+                            <span>Period Logged</span>
+                        </div>
                     </div>
 
                     <Alert>
