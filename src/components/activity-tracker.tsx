@@ -17,6 +17,7 @@ import {
   } from "@/components/ui/chart"
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Separator } from './ui/separator';
+import React from 'react';
 
 const mockHourlyData = [
     { hour: '6am', steps: 150 },
@@ -183,5 +184,3 @@ export function ActivityTracker() {
     </div>
   );
 }
-
-    
