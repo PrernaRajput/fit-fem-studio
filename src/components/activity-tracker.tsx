@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import {
   Card,
@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays, getMonth } from 'date-fns';
+import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays, getMonth, startOfMonth, getDaysInMonth } from 'date-fns';
 import { Carousel, CarouselContent, CarouselItem } from './ui/carousel';
 import { cn } from '@/lib/utils';
 
@@ -82,10 +82,17 @@ export function ActivityTracker() {
     const [currentDate] = useState(new Date());
     const [displayWeek, setDisplayWeek] = useState(startOfWeek(new Date()));
     const [loggedPeriodDays, setLoggedPeriodDays] = useState<Date[]>([]);
-    const [cycleStartDay] = useState(subDays(new Date(), 13)); // Mock cycle started 13 days ago
+    
+    // Default cycle start day, will be updated by logged period days
+    const [cycleStartDay, setCycleStartDay] = useState(subDays(new Date(), 13)); 
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
 
-    const dayInCycle = differenceInCalendarDays(currentDate, cycleStartDay) % 28 + 1;
-    const currentPhase = getCyclePhase(dayInCycle);
+
+    const dayInCycle = useMemo(() => {
+        return differenceInCalendarDays(currentDate, cycleStartDay) % 28 + 1;
+    }, [currentDate, cycleStartDay]);
+
+    const currentPhase = useMemo(() => getCyclePhase(dayInCycle), [dayInCycle]);
 
     const handleMeasurementChange = (index: number, value: string) => {
         const newMeasurements = [...tempMeasurements];
@@ -102,21 +109,27 @@ export function ActivityTracker() {
     };
 
     const handleLogPeriod = (day: Date) => {
-        setLoggedPeriodDays(prev => {
-          const alreadyLogged = prev.some(d => isSameDay(d, day));
-          if (alreadyLogged) {
-            return prev.filter(d => !isSameDay(d, day));
-          } else {
-            return [...prev, day];
-          }
-        });
+        const newLoggedDays = loggedPeriodDays.some(d => isSameDay(d, day))
+          ? loggedPeriodDays.filter(d => !isSameDay(d, day))
+          : [...loggedPeriodDays, day];
+        
+        newLoggedDays.sort((a, b) => a.getTime() - b.getTime());
+        setLoggedPeriodDays(newLoggedDays);
+    
+        if (newLoggedDays.length > 0) {
+          // The new cycle starts on the first logged day
+          setCycleStartDay(newLoggedDays[0]);
+        } else {
+          // Revert to default if all logs are removed
+          setCycleStartDay(subDays(new Date(), 13));
+        }
       };
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(displayWeek, i));
 
     const DayWithCycleColor = ({ date, displayMonth }: { date: Date; displayMonth: Date }) => {
         const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, date));
-        const dayOfCycle = differenceInCalendarDays(date, cycleStartDay) % 28 + 1;
+        const dayOfCycle = (differenceInCalendarDays(date, cycleStartDay) % 28 + 1 + 28) % 28;
         const phaseForDay = getCyclePhase(dayOfCycle);
         const isCurrentMonth = getMonth(date) === getMonth(displayMonth);
     
@@ -125,12 +138,16 @@ export function ActivityTracker() {
             "relative h-9 w-9 flex items-center justify-center rounded-md",
             isPeriodDay ? 'bg-accent text-accent-foreground' : phaseForDay.color,
             !isCurrentMonth && "text-muted-foreground opacity-50",
-            isSameDay(date, new Date()) && "ring-2 ring-primary"
+            isSameDay(date, currentDate) && "ring-2 ring-primary"
           )}>
             {format(date, 'd')}
           </div>
         );
       };
+      
+    const nextPredictedPeriodStart = useMemo(() => {
+        return addDays(cycleStartDay, 28);
+    }, [cycleStartDay]);
 
   return (
     <div className="container mx-auto px-4">
@@ -270,8 +287,11 @@ export function ActivityTracker() {
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
                                 <Calendar
+                                    month={calendarMonth}
+                                    onMonthChange={setCalendarMonth}
                                     mode="single"
                                     selected={currentDate}
+                                    onDayClick={handleLogPeriod}
                                     components={{ Day: DayWithCycleColor }}
                                     className="rounded-md border"
                                 />
@@ -285,13 +305,13 @@ export function ActivityTracker() {
                         <p className="text-sm">Day {dayInCycle} of your cycle</p>
                     </div>
 
-                    <div className="relative">
+                    <div className="relative px-8">
                         <Carousel opts={{ align: "start", dragFree: true }}>
                             <CarouselContent className="-ml-4">
                                 {weekDays.map((day, index) => {
                                     const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, day));
                                     const isToday = isSameDay(day, currentDate);
-                                    const dayOfCycleForBubble = differenceInCalendarDays(day, cycleStartDay) % 28 + 1;
+                                    const dayOfCycleForBubble = (differenceInCalendarDays(day, cycleStartDay) % 28 + 1 + 28) % 28;
                                     const phaseForBubble = getCyclePhase(dayOfCycleForBubble);
                                     
                                     return (
@@ -305,8 +325,7 @@ export function ActivityTracker() {
                                                     "w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
                                                     isToday && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                                                     isPeriodDay ? 'bg-accent text-accent-foreground' : phaseForBubble.color,
-                                                    isToday && !isPeriodDay && 'bg-primary text-primary-foreground',
-                                                    !isToday && !isPeriodDay && 'hover:bg-muted'
+                                                    !isPeriodDay && 'hover:bg-muted'
                                                 )}>
                                                     {format(day, 'd')}
                                                 </div>
@@ -315,12 +334,12 @@ export function ActivityTracker() {
                                     );
                                 })}
                             </CarouselContent>
-                            <div className="absolute top-1/2 -translate-y-1/2 -left-8">
+                            <div className="absolute top-1/2 -translate-y-1/2 -left-4">
                                 <Button variant="ghost" size="icon" onClick={() => setDisplayWeek(subDays(displayWeek, 7))}>
                                     <ChevronLeft/>
                                 </Button>
                             </div>
-                             <div className="absolute top-1/2 -translate-y-1/2 -right-8">
+                             <div className="absolute top-1/2 -translate-y-1/2 -right-4">
                                 <Button variant="ghost" size="icon" onClick={() => setDisplayWeek(addDays(displayWeek, 7))}>
                                     <ChevronRight/>
                                 </Button>
@@ -328,7 +347,7 @@ export function ActivityTracker() {
                         </Carousel>
                     </div>
 
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs px-2">
                         {cyclePhases.map(phase => (
                             <div key={phase.name} className="flex items-center gap-2">
                                 <div className={cn("w-3 h-3 rounded-full", phase.color)} />
@@ -345,7 +364,7 @@ export function ActivityTracker() {
                         <Info className="h-4 w-4" />
                         <AlertTitle>Log Your Period</AlertTitle>
                         <AlertDescription>
-                            Tap on a day to log your period. This helps predict your next cycle. Your next predicted period starts in {28 - dayInCycle} days.
+                            Tap on a day to log your period. Your next predicted period starts around {format(nextPredictedPeriodStart, 'MMMM do')}.
                         </AlertDescription>
                     </Alert>
                 </CardContent>
