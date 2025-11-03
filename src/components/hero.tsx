@@ -30,7 +30,7 @@ export function Hero() {
         <p className="mt-4 max-w-2xl text-lg md:text-xl text-neutral-200 text-shadow">
           Your personalized AI companion for fitness, strength, and well-being.
         </p>
-        <div className="flex gap-4 mt-8">
+        <div className="flex flex-wrap justify-center gap-4 mt-8">
             <Link href="/workout">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6">
                     Start Workout
@@ -39,6 +39,11 @@ export function Hero() {
             <Link href="/nutrition">
                 <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6">
                     Track Nutrition
+                </Button>
+            </Link>
+             <Link href="/progress">
+                <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6">
+                    View Progress
                 </Button>
             </Link>
         </div>
