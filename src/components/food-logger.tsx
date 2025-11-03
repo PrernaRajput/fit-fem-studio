@@ -130,17 +130,17 @@ export function FoodLogger() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="weight">Weight (kg)</Label>
-                            <Input id="weight" type="number" value={userProfile.weightInKilograms} onChange={(e) => handleProfileChange('weightInKilograms', parseInt(e.target.value))} />
+                            <Input id="weight" type="number" value={userProfile.weightInKilograms} onChange={(e) => handleProfileChange('weightInKilograms', e.target.value === '' ? 0 : parseInt(e.target.value, 10))} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="height">Height (cm)</Label>
-                            <Input id="height" type="number" value={userProfile.heightInCentimeters} onChange={(e) => handleProfileChange('heightInCentimeters', parseInt(e.target.value))} />
+                            <Input id="height" type="number" value={userProfile.heightInCentimeters} onChange={(e) => handleProfileChange('heightInCentimeters', e.target.value === '' ? 0 : parseInt(e.target.value, 10))} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="age">Age</Label>
-                            <Input id="age" type="number" value={userProfile.ageInYears} onChange={(e) => handleProfileChange('ageInYears', parseInt(e.target.value))} />
+                            <Input id="age" type="number" value={userProfile.ageInYears} onChange={(e) => handleProfileChange('ageInYears', e.target.value === '' ? 0 : parseInt(e.target.value, 10))} />
                         </div>
                         <div className="space-y-2">
                             <Label>Gender</Label>
