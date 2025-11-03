@@ -33,7 +33,7 @@ const exercises = [
   {
     name: 'Jumping Jacks',
     duration: 30,
-    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWw5cTY0ZHFocnZ2b2oxcDl3ZGZobTB1YjN6dDBtY2p5bHJ4cGVtZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VbnJA6zyOEEp4vj7Vf/giphy.gif',
+    gifUrl: 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lvb3VmOTUweTZ1d3pmYzBwajBhZGR3c2JrMzQxMWp2dGhwOG80byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ckMk3RKUK29lziaspI/giphy.gif',
     youtubeUrl: 'https://www.youtube.com/embed/c4DAnQ6DtF8',
     calories: 25,
     imageHint: 'jumping jacks',
@@ -49,7 +49,7 @@ const exercises = [
   {
     name: 'Squats',
     duration: 45,
-    gifUrl: 'https://picsum.photos/seed/squats/600/400',
+    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjY2Mnl4OTQ1ZmdudWd0MWlpY3hlcmNsM3g4NmFjdnc2ZXNuZnNjNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1C1ipHPEs4Vjwglwza/giphy.gif',
     youtubeUrl: 'https://www.youtube.com/embed/x_t89sI3_Hw',
     calories: 40,
     imageHint: 'woman squats',
@@ -65,7 +65,7 @@ const exercises = [
   {
     name: 'Plank',
     duration: 60,
-    gifUrl: 'https://picsum.photos/seed/plank/600/400',
+    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTlkMWg0NWwxczRpc293ZjkxYnc3cDRldjZndXA0czAwNDNycmJvZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/d3mlADRlF7SMFQRy/giphy.gif',
     youtubeUrl: 'https://www.youtube.com/embed/pD3-e4I_j4I',
     calories: 30,
     imageHint: 'woman planking',
