@@ -103,15 +103,6 @@ export async function recommendCalories(input: RecommendCaloriesInput): Promise<
   return recommendCaloriesFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'recommendCaloriesPrompt',
-  input: {schema: RecommendCaloriesInputSchema},
-  output: {schema: RecommendCaloriesOutputSchema},
-  prompt: `You are a personal trainer. The user has the following goal: {{{goal}}}. The user burned {{{dailyCaloriesBurned}}} calories today and consumed {{{dailyCaloriesIntake}}} calories today. The user stats are: weight: {{{weightInKilograms}}} kg, height: {{{heightInCentimeters}}} cm, age: {{{ageInYears}}}, gender: {{{gender}}}, activity level: {{{activityLevel}}}. Calculate the recommended daily calorie intake, the remaining calories for the user today, and the calorie deficit or surplus based on the user goal.
-
-  Return the response in JSON format.`,
-});
-
 const recommendCaloriesFlow = ai.defineFlow(
   {
     name: 'recommendCaloriesFlow',
@@ -135,7 +126,5 @@ const recommendCaloriesFlow = ai.defineFlow(
       remainingCalories,
       goalDeficit,
     };
-    //const {output} = await prompt(input);
-    //return output!;
   }
 );
