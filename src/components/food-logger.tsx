@@ -23,7 +23,6 @@ import {
   Drumstick,
   Plus,
   Minus,
-  Settings,
   ChevronDown,
 } from 'lucide-react';
 import {
@@ -41,7 +40,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
-import { recommendCalories, RecommendCaloriesInput, RecommendCaloriesOutput } from '@/ai/ai-calorie-budget-recommendation';
+import { recommendCalories, RecommendCaloriesInput } from '@/ai/ai-calorie-budget-recommendation';
 
 
 const foodCategories = [
