@@ -33,7 +33,7 @@ const exercises = [
   {
     name: 'Jumping Jacks',
     duration: 30,
-    gifUrl: 'https://picsum.photos/seed/jacks/600/400',
+    gifUrl: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWw5cTY0ZHFocnZ2b2oxcDl3ZGZobTB1YjN6dDBtY2p5bHJ4cGVtZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VbnJA6zyOEEp4vj7Vf/giphy.gif',
     youtubeUrl: 'https://www.youtube.com/embed/c4DAnQ6DtF8',
     calories: 25,
     imageHint: 'jumping jacks',
@@ -208,6 +208,7 @@ export function WorkoutRoutine() {
                       height={400}
                       className="object-cover w-full h-full"
                       data-ai-hint={currentExercise.imageHint}
+                      unoptimized
                     />
                 )
             )}
