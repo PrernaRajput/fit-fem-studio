@@ -52,14 +52,14 @@ export function ProgressCalendar() {
     setDate(selectedDate);
   };
   
-  const DayWithDot = ({ day }: { day: Date }) => {
-    const dateKey = format(day, 'yyyy-MM-dd');
+  const DayWithDot = ({ date: dayDate, displayMonth }: { date: Date; displayMonth: Date }) => {
+    const dateKey = format(dayDate, 'yyyy-MM-dd');
     const hasData = mockData[dateKey];
     return (
-      <div className="relative">
-        {format(day, 'd')}
+      <div className="relative h-9 w-9 flex items-center justify-center">
+        {format(dayDate, 'd')}
         {hasData && (
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
         )}
       </div>
     );
@@ -84,7 +84,7 @@ export function ProgressCalendar() {
               onSelect={handleDateSelect}
               className="rounded-md border"
               components={{
-                Day: (props) => <DayWithDot day={props.date} />,
+                Day: DayWithDot,
               }}
             />
           </div>
