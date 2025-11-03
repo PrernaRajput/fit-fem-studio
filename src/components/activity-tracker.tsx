@@ -57,9 +57,9 @@ const initialBodyMeasurements = [
 
 const getCyclePhase = (cycleDay: number) => {
     if (cycleDay >= 1 && cycleDay <= 5) return { name: 'Menstrual', color: 'bg-red-400/30' };
-    if (cycleDay >= 6 && cycleDay <= 13) return { name: 'Follicular', color: 'bg-blue-400/30' };
-    if (cycleDay >= 14 && cycleDay <= 15) return { name: 'Ovulation', color: 'bg-purple-400/30' };
-    if (cycleDay >= 16 && cycleDay <= 28) return { name: 'Luteal', color: 'bg-yellow-400/30' };
+    if (cycleDay >= 6 && cycleDay <= 13) return { name: 'Follicular', color: 'bg-green-400/30' };
+    if (cycleDay >= 14 && cycleDay <= 15) return { name: 'Ovulation', color: 'bg-blue-400/30' };
+    if (cycleDay >= 16 && cycleDay <= 28) return { name: 'Luteal', color: 'bg-pink-400/30' };
     return { name: 'Unknown', color: 'bg-muted' };
 };
 
