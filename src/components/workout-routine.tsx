@@ -247,7 +247,7 @@ export function WorkoutRoutine() {
                                             id={`duration-${index}`}
                                             type="number"
                                             value={ex.duration}
-                                            onChange={(e) => handleTimeChange(index, parseInt(e.target.value, 10))}
+                                            onChange={(e) => handleTimeChange(index, e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
                                             className="w-20 text-center"
                                             step={5}
                                         />
