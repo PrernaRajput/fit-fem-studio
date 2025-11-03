@@ -43,20 +43,15 @@ const mockData: { [key: string]: DailyStats } = {
 
 export function ProgressCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedDayStats, setSelectedDayStats] = useState<DailyStats | null>(
-    mockData[format(new Date(), 'yyyy-MM-dd')] || null
-  );
+
+  const selectedDayStats: DailyStats | null = date
+    ? mockData[format(date, 'yyyy-MM-dd')] || null
+    : null;
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
-    if (selectedDate) {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd');
-      setSelectedDayStats(mockData[dateKey] || null);
-    } else {
-      setSelectedDayStats(null);
-    }
   };
-
+  
   const DayWithDot = ({ day }: { day: Date }) => {
     const dateKey = format(day, 'yyyy-MM-dd');
     const hasData = mockData[dateKey];
