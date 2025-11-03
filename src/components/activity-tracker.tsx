@@ -10,7 +10,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from './ui/button';
-import { Footprints, Target, Info, BedDouble, CalendarHeart, Tape } from 'lucide-react';
+import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler } from 'lucide-react';
 import {
     ChartContainer,
     ChartTooltipContent,
@@ -159,7 +159,7 @@ export function ActivityTracker() {
             <Card className="overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
-                        <Tape className="h-7 w-7" />
+                        <Ruler className="h-7 w-7" />
                         Body Measurements
                     </CardTitle>
                 </CardHeader>
