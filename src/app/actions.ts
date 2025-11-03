@@ -1,4 +1,3 @@
-
 'use server';
 
 import {
@@ -6,9 +5,14 @@ import {
   type GeneratePersonalizedWorkoutPlanInput,
   type GeneratePersonalizedWorkoutPlanOutput,
 } from '@/ai/flows/personalized-workout-plan';
+import {
+  analyzeFood,
+} from '@/ai/ai-food-logger';
 import { z } from 'zod';
+import { AnalyzeFoodInputSchema, type AnalyzeFoodInput, type AnalyzeFoodOutput } from '@/lib/types';
 
-const InputSchema = z.object({
+
+const workoutPlanSchema = z.object({
   fitnessLevel: z.enum(['beginner', 'intermediate', 'advanced']),
   goals: z.enum(['weight loss', 'tone', 'maintain', 'muscle gain']),
   availableEquipment: z
@@ -22,7 +26,7 @@ const InputSchema = z.object({
 export async function getWorkoutPlan(
   data: GeneratePersonalizedWorkoutPlanInput
 ): Promise<{ success: boolean; data: GeneratePersonalizedWorkoutPlanOutput | null; error: string | null | z.ZodIssue[] }> {
-  const validation = InputSchema.safeParse(data);
+  const validation = workoutPlanSchema.safeParse(data);
   if (!validation.success) {
     return { success: false, data: null, error: validation.error.issues };
   }
@@ -36,5 +40,22 @@ export async function getWorkoutPlan(
   } catch (e) {
     console.error(e);
     return { success: false, data: null, error: 'An unexpected error occurred while generating your workout plan. Please try again later.' };
+  }
+}
+
+export async function getFoodAnalysis(
+  query: AnalyzeFoodInput
+): Promise<{ success: boolean; data: AnalyzeFoodOutput | null; error: string | null }> {
+  const validation = AnalyzeFoodInputSchema.safeParse(query);
+  if (!validation.success) {
+    return { success: false, data: null, error: validation.error.flatten().fieldErrors.query?.[0] || 'Invalid input.' };
+  }
+
+  try {
+    const foodData = await analyzeFood(validation.data);
+    return { success: true, data: foodData, error: null };
+  } catch (e) {
+    console.error(e);
+    return { success: false, data: null, error: 'An unexpected error occurred while analyzing the food. Please try again.' };
   }
 }

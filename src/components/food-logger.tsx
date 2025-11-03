@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getFoodAnalysis } from '@/app/actions';
 import {
   Card,
   CardContent,
@@ -24,6 +25,8 @@ import {
   Plus,
   Minus,
   ChevronDown,
+  X,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -41,51 +44,129 @@ import {
     SelectValue,
   } from '@/components/ui/select';
 import { recommendCalories, RecommendCaloriesInput } from '@/ai/ai-calorie-budget-recommendation';
+import { AnalyzeFoodOutput } from '@/ai/ai-food-logger';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
+
+type FoodItem = {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+};
+  
+type MealLog = {
+    Breakfast: FoodItem[];
+    Lunch: FoodItem[];
+    Dinner: FoodItem[];
+    Snacks: FoodItem[];
+};
 
 const foodCategories = [
-  { name: 'Breakfast', icon: <Apple className="h-5 w-5" /> },
-  { name: 'Lunch', icon: <Salad className="h-5 w-5" /> },
-  { name: 'Dinner', icon: <Drumstick className="h-5 w-5" /> },
-  { name: 'Snacks', icon: <BookOpen className="h-5 w-5" /> },
+    { name: 'Breakfast', icon: <Apple className="h-5 w-5" />, key: 'Breakfast' as keyof MealLog },
+    { name: 'Lunch', icon: <Salad className="h-5 w-5" />, key: 'Lunch' as keyof MealLog },
+    { name: 'Dinner', icon: <Drumstick className="h-5 w-5" />, key: 'Dinner' as keyof MealLog },
+    { name: 'Snacks', icon: <BookOpen className="h-5 w-5" />, key: 'Snacks' as keyof MealLog },
 ];
 
 export function FoodLogger() {
-  const [calories, setCalories] = useState({
-    consumed: 1200,
-    budget: 2000,
-    burned: 300,
-  });
-  const [water, setWater] = useState({ consumed: 4, goal: 8 });
-  const [userProfile, setUserProfile] = useState<RecommendCaloriesInput>({
-    goal: 'weight loss',
-    dailyCaloriesBurned: 300,
-    dailyCaloriesIntake: 1200,
-    weightInKilograms: 70,
-    heightInCentimeters: 170,
-    ageInYears: 30,
-    gender: 'female',
-    activityLevel: 'lightly active',
-  });
-  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+    const { toast } = useToast();
+    const [mealLog, setMealLog] = useState<MealLog>({ Breakfast: [], Lunch: [], Dinner: [], Snacks: [] });
+    const [calories, setCalories] = useState({
+        consumed: 1200,
+        budget: 2000,
+        burned: 300,
+    });
+    const [water, setWater] = useState({ consumed: 4, goal: 8 });
+    const [userProfile, setUserProfile] = useState<RecommendCaloriesInput>({
+        goal: 'weight loss',
+        dailyCaloriesBurned: 300,
+        dailyCaloriesIntake: 1200,
+        weightInKilograms: 70,
+        heightInCentimeters: 170,
+        ageInYears: 30,
+        gender: 'female',
+        activityLevel: 'lightly active',
+    });
+    const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+    
+    // State for food logging dialog
+    const [isFoodLogOpen, setIsFoodLogOpen] = useState(false);
+    const [foodQuery, setFoodQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState<AnalyzeFoodOutput | null>(null);
+    const [activeCategory, setActiveCategory] = useState<keyof MealLog | null>(null);
 
-  const remaining = calories.budget - calories.consumed + calories.burned;
-  const consumedPercentage = (calories.consumed / calories.budget) * 100;
-  const waterPercentage = (water.consumed / water.goal) * 100;
+    const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + item.calories, 0);
+    const remaining = calories.budget - consumedCalories + calories.burned;
+    const consumedPercentage = (consumedCalories / calories.budget) * 100;
+    const waterPercentage = (water.consumed / water.goal) * 100;
 
-  const handleWaterChange = (amount: number) => {
-    setWater(prev => ({ ...prev, consumed: Math.max(0, prev.consumed + amount) }));
-  };
+    const handleWaterChange = (amount: number) => {
+        setWater(prev => ({ ...prev, consumed: Math.max(0, prev.consumed + amount) }));
+    };
 
-  const handleProfileChange = (key: keyof RecommendCaloriesInput, value: any) => {
-    setUserProfile(prev => ({...prev, [key]: value}));
-  }
+    const handleProfileChange = (key: keyof RecommendCaloriesInput, value: any) => {
+        setUserProfile(prev => ({...prev, [key]: value}));
+    }
 
-  const handleGoalUpdate = async () => {
-    const result = await recommendCalories(userProfile);
-    setCalories(prev => ({ ...prev, budget: result.recommendedDailyCalorieIntake }));
-    setIsGoalDialogOpen(false);
-  }
+    const handleGoalUpdate = async () => {
+        const result = await recommendCalories(userProfile);
+        setCalories(prev => ({ ...prev, budget: result.recommendedDailyCalorieIntake }));
+        setIsGoalDialogOpen(false);
+    }
+    
+    const openFoodLogDialog = (category: keyof MealLog) => {
+        setActiveCategory(category);
+        setSearchResult(null);
+        setFoodQuery('');
+        setIsFoodLogOpen(true);
+    };
+
+    const handleFoodSearch = async () => {
+        if (!foodQuery.trim()) return;
+        setIsSearching(true);
+        setSearchResult(null);
+
+        const result = await getFoodAnalysis({ query: foodQuery });
+
+        if (result.success && result.data) {
+            setSearchResult(result.data);
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Search Failed',
+                description: result.error || 'Could not analyze the food item.',
+            });
+        }
+        setIsSearching(false);
+    };
+    
+    const addFoodItemToLog = () => {
+        if (searchResult && activeCategory) {
+            const newFoodItem: FoodItem = {
+                name: searchResult.foodName,
+                calories: searchResult.calories,
+                protein: searchResult.protein,
+                carbs: searchResult.carbohydrates,
+                fat: searchResult.fat,
+            };
+            setMealLog(prev => ({
+                ...prev,
+                [activeCategory]: [...prev[activeCategory], newFoodItem],
+            }));
+            setIsFoodLogOpen(false);
+        }
+    };
+
+    const removeFoodItem = (category: keyof MealLog, index: number) => {
+        setMealLog(prev => ({
+            ...prev,
+            [category]: prev[category].filter((_, i) => i !== index),
+        }));
+    };
 
   return (
     <div className="container mx-auto px-4">
@@ -181,7 +262,7 @@ export function FoodLogger() {
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-sm text-muted-foreground">Consumed</p>
-              <p className="text-2xl font-bold">{calories.consumed}</p>
+              <p className="text-2xl font-bold">{consumedCalories}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Budget</p>
@@ -208,21 +289,51 @@ export function FoodLogger() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Log Food
-                </Button>
-              </DialogTrigger>
+          <Dialog open={isFoodLogOpen} onOpenChange={setIsFoodLogOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Log Food</DialogTitle>
+                  <DialogTitle>Log Food for {activeCategory}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                     <Label htmlFor="food-search">Search for food</Label>
-                    <Input id="food-search" placeholder="e.g., Apple, 1 slice" />
-                    <Button className="w-full">Search</Button>
+                    <div className="flex gap-2">
+                        <Input 
+                            id="food-search" 
+                            placeholder="e.g., 1 large apple" 
+                            value={foodQuery}
+                            onChange={(e) => setFoodQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleFoodSearch()}
+                        />
+                        <Button onClick={handleFoodSearch} disabled={isSearching}>
+                            {isSearching ? <Loader2 className="animate-spin" /> : 'Search'}
+                        </Button>
+                    </div>
+
+                    {isSearching && (
+                        <div className="text-center p-4">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                            <p className="mt-2 text-muted-foreground">Analyzing...</p>
+                        </div>
+                    )}
+
+                    {searchResult && (
+                        <div className="space-y-4 pt-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className='capitalize'>{searchResult.foodName}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <p><strong>Calories:</strong> {searchResult.calories} kcal</p>
+                                    <p><strong>Protein:</strong> {searchResult.protein}g</p>
+                                    <p><strong>Carbs:</strong> {searchResult.carbohydrates}g</p>
+                                    <p><strong>Fat:</strong> {searchResult.fat}g</p>
+                                </CardContent>
+                            </Card>
+                            <Button className="w-full" onClick={addFoodItemToLog}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add to {activeCategory}
+                            </Button>
+                        </div>
+                    )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -230,7 +341,6 @@ export function FoodLogger() {
             <Button variant="outline" className="w-full">
               <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
             </Button>
-          </div>
 
           {/* Meal Categories */}
           <div className="space-y-4">
@@ -243,14 +353,30 @@ export function FoodLogger() {
                       {category.name}
                     </CardTitle>
                   </div>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" onClick={() => openFoodLogDialog(category.key)}>
                     <PlusCircle className="h-5 w-5 text-muted-foreground" />
                   </Button>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No items logged yet.
-                  </p>
+                    {mealLog[category.key].length > 0 ? (
+                        <ul className="space-y-2">
+                            {mealLog[category.key].map((item, index) => (
+                                <li key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-background">
+                                    <div>
+                                        <p className="font-semibold capitalize">{item.name}</p>
+                                        <p className="text-xs text-muted-foreground">{item.calories} kcal</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => removeFoodItem(category.key, index)}>
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            No items logged yet.
+                        </p>
+                    )}
                 </CardContent>
               </Card>
             ))}
