@@ -247,14 +247,14 @@ export function ActivityTracker() {
                             align: "start",
                             dragFree: true,
                         }}>
-                            <CarouselContent className="-ml-2">
+                            <CarouselContent className="-ml-4">
                                 {weekDays.map((day, index) => {
                                     const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, day));
                                     const isToday = isSameDay(day, currentDate);
                                     return (
-                                        <CarouselItem key={index} className="basis-1/7 pl-2">
+                                        <CarouselItem key={index} className="basis-1/7 pl-4">
                                             <div 
-                                                className="flex flex-col items-center justify-center cursor-pointer"
+                                                className="flex flex-col items-center justify-center cursor-pointer space-y-1"
                                                 onClick={() => handleLogPeriod(day)}
                                             >
                                                 <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
@@ -348,5 +348,3 @@ export function ActivityTracker() {
     </div>
   );
 }
-
-    
