@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import {
   Card,
@@ -11,7 +11,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from './ui/button';
-import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock } from 'lucide-react';
+import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     ChartContainer,
     ChartTooltipContent,
@@ -21,6 +21,10 @@ import { Separator } from './ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { addDays, subDays, format, startOfWeek, isSameDay, getDay } from 'date-fns';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
+import { cn } from '@/lib/utils';
+
 
 const mockHourlyData = [
     { hour: '6am', steps: 150 },
@@ -51,11 +55,29 @@ const initialBodyMeasurements = [
     { name: 'Chest', value: '34', unit: 'in' },
 ];
 
+const getCyclePhase = (cycleDay: number) => {
+    if (cycleDay >= 1 && cycleDay <= 5) return { name: 'Menstrual', color: 'bg-red-400/30' };
+    if (cycleDay >= 6 && cycleDay <= 13) return { name: 'Follicular', color: 'bg-blue-400/30' };
+    if (cycleDay >= 14 && cycleDay <= 15) return { name: 'Ovulation', color: 'bg-purple-400/30' };
+    if (cycleDay >= 16 && cycleDay <= 28) return { name: 'Luteal', color: 'bg-yellow-400/30' };
+    return { name: 'Unknown', color: 'bg-muted' };
+};
+
+
 export function ActivityTracker() {
     const [bodyMeasurements, setBodyMeasurements] = useState(initialBodyMeasurements);
     const [tempMeasurements, setTempMeasurements] = useState(initialBodyMeasurements);
     const [idealSleepHours, setIdealSleepHours] = useState(8);
     const [tempIdealSleep, setTempIdealSleep] = useState(8);
+
+    // Cycle tracking state
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [displayWeek, setDisplayWeek] = useState(startOfWeek(new Date()));
+    const [loggedPeriodDays, setLoggedPeriodDays] = useState<Date[]>([]);
+    const [cycleStartDay] = useState(subDays(new Date(), 13)); // Mock cycle started 13 days ago
+
+    const dayInCycle = Math.floor((new Date().getTime() - cycleStartDay.getTime()) / (1000 * 3600 * 24)) + 1;
+    const currentPhase = getCyclePhase(dayInCycle);
 
     const handleMeasurementChange = (index: number, value: string) => {
         const newMeasurements = [...tempMeasurements];
@@ -71,6 +93,18 @@ export function ActivityTracker() {
         setIdealSleepHours(tempIdealSleep);
     };
 
+    const handleLogPeriod = (day: Date) => {
+        setLoggedPeriodDays(prev => {
+          const alreadyLogged = prev.some(d => isSameDay(d, day));
+          if (alreadyLogged) {
+            return prev.filter(d => !isSameDay(d, day));
+          } else {
+            return [...prev, day];
+          }
+        });
+      };
+
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(displayWeek, i));
 
   return (
     <div className="container mx-auto px-4">
@@ -203,16 +237,58 @@ export function ActivityTracker() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="text-center p-6 bg-muted/50 rounded-lg">
-                        <p className="text-lg text-muted-foreground">You're on</p>
-                        <p className="text-4xl font-bold text-accent">Day 14</p>
-                        <p className="text-sm text-muted-foreground">of your cycle (Ovulation Phase)</p>
+                    <div className={cn("text-center p-4 rounded-lg", currentPhase.color)}>
+                        <p className="font-semibold">{currentPhase.name} Phase</p>
+                        <p className="text-sm">Day {dayInCycle} of your cycle</p>
                     </div>
+
+                    <div className="relative">
+                        <Carousel opts={{
+                            align: "start",
+                            dragFree: true,
+                        }}>
+                            <CarouselContent className="-ml-2">
+                                {weekDays.map((day, index) => {
+                                    const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, day));
+                                    const isToday = isSameDay(day, currentDate);
+                                    return (
+                                        <CarouselItem key={index} className="basis-1/7 pl-2">
+                                            <div 
+                                                className="flex flex-col items-center justify-center cursor-pointer"
+                                                onClick={() => handleLogPeriod(day)}
+                                            >
+                                                <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
+                                                    isToday && 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background',
+                                                    isPeriodDay && 'bg-accent text-accent-foreground',
+                                                    !isToday && !isPeriodDay && 'hover:bg-muted'
+                                                )}>
+                                                    {format(day, 'd')}
+                                                </div>
+                                            </div>
+                                        </CarouselItem>
+                                    );
+                                })}
+                            </CarouselContent>
+                            <div className="absolute top-1/2 -translate-y-1/2 -left-8">
+                                <Button variant="ghost" size="icon" onClick={() => setDisplayWeek(subDays(displayWeek, 7))}>
+                                    <ChevronLeft/>
+                                </Button>
+                            </div>
+                             <div className="absolute top-1/2 -translate-y-1/2 -right-8">
+                                <Button variant="ghost" size="icon" onClick={() => setDisplayWeek(addDays(displayWeek, 7))}>
+                                    <ChevronRight/>
+                                </Button>
+                            </div>
+                        </Carousel>
+                    </div>
+
                     <Alert>
                         <Info className="h-4 w-4" />
-                        <AlertTitle>Connect to track your cycle</AlertTitle>
+                        <AlertTitle>Log Your Period</AlertTitle>
                         <AlertDescription>
-                            Integrate with your health app to automatically sync your menstrual cycle data.
+                            Tap on a day to log your period. This helps predict your next cycle. Your next predicted period starts in {28 - dayInCycle} days.
                         </AlertDescription>
                     </Alert>
                 </CardContent>
@@ -272,3 +348,5 @@ export function ActivityTracker() {
     </div>
   );
 }
+
+    
