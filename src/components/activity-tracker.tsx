@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import {
   Card,
@@ -10,14 +11,16 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from './ui/button';
-import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler } from 'lucide-react';
+import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock } from 'lucide-react';
 import {
     ChartContainer,
     ChartTooltipContent,
   } from "@/components/ui/chart"
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Separator } from './ui/separator';
-import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 const mockHourlyData = [
     { hour: '6am', steps: 150 },
@@ -35,20 +38,40 @@ const mockHourlyData = [
     { hour: '6pm', steps: 2200 },
     { hour: '7pm', steps: 900 },
   ];
-  
+
 const totalSteps = mockHourlyData.reduce((acc, curr) => acc + curr.steps, 0);
 const dailyGoal = 10000;
 const progress = Math.min((totalSteps / dailyGoal) * 100, 100);
 
-const bodyMeasurements = [
-    { name: 'Waist', value: '28 in' },
-    { name: 'Hips', value: '38 in' },
-    { name: 'Thigh', value: '21 in' },
-    { name: 'Arm', value: '11 in' },
-    { name: 'Chest', value: '34 in' },
+const initialBodyMeasurements = [
+    { name: 'Waist', value: '28', unit: 'in' },
+    { name: 'Hips', value: '38', unit: 'in' },
+    { name: 'Thigh', value: '21', unit: 'in' },
+    { name: 'Arm', value: '11', unit: 'in' },
+    { name: 'Chest', value: '34', unit: 'in' },
 ];
 
 export function ActivityTracker() {
+    const [bodyMeasurements, setBodyMeasurements] = useState(initialBodyMeasurements);
+    const [tempMeasurements, setTempMeasurements] = useState(initialBodyMeasurements);
+    const [idealSleepHours, setIdealSleepHours] = useState(8);
+    const [tempIdealSleep, setTempIdealSleep] = useState(8);
+
+    const handleMeasurementChange = (index: number, value: string) => {
+        const newMeasurements = [...tempMeasurements];
+        newMeasurements[index].value = value;
+        setTempMeasurements(newMeasurements);
+    };
+
+    const saveMeasurements = () => {
+        setBodyMeasurements(tempMeasurements);
+    };
+
+    const saveSleepGoal = () => {
+        setIdealSleepHours(tempIdealSleep);
+    };
+
+
   return (
     <div className="container mx-auto px-4">
         <div className="max-w-2xl mx-auto space-y-8">
@@ -119,9 +142,18 @@ export function ActivityTracker() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="text-center p-6 bg-muted/50 rounded-lg">
-                        <p className="text-lg text-muted-foreground">Sleep Score</p>
-                        <p className="text-6xl font-bold text-primary">85</p>
-                        <p className="text-sm text-muted-foreground">7h 45m last night</p>
+                        <div className='flex justify-around items-center'>
+                            <div>
+                                <p className="text-lg text-muted-foreground">Sleep Score</p>
+                                <p className="text-6xl font-bold text-primary">85</p>
+                                <p className="text-sm text-muted-foreground">7h 45m last night</p>
+                            </div>
+                            <div>
+                                <p className="text-lg text-muted-foreground">Your Goal</p>
+                                <p className="text-6xl font-bold text-primary">{idealSleepHours}h</p>
+                                <p className="text-sm text-muted-foreground">per night</p>
+                            </div>
+                        </div>
                     </div>
                      <Alert>
                         <Info className="h-4 w-4" />
@@ -131,6 +163,36 @@ export function ActivityTracker() {
                         </AlertDescription>
                     </Alert>
                 </CardContent>
+                <CardFooter>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Clock className="mr-2 h-4 w-4" />
+                                Set Sleep Goal
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Set Your Ideal Sleep Goal</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="sleep-hours">Ideal Hours of Sleep</Label>
+                                    <Input
+                                        id="sleep-hours"
+                                        type="number"
+                                        value={tempIdealSleep}
+                                        onChange={(e) => setTempIdealSleep(Number(e.target.value))}
+                                        placeholder="e.g., 8"
+                                    />
+                                </div>
+                            </div>
+                            <DialogClose asChild>
+                                <Button onClick={saveSleepGoal} className="w-full">Save Goal</Button>
+                            </DialogClose>
+                        </DialogContent>
+                    </Dialog>
+                </CardFooter>
             </Card>
 
             <Card className="overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
@@ -169,7 +231,7 @@ export function ActivityTracker() {
                         <React.Fragment key={measurement.name}>
                         <div className="flex justify-between items-center py-2">
                             <p className="font-medium">{measurement.name}</p>
-                            <p className="text-muted-foreground font-semibold">{measurement.value}</p>
+                            <p className="text-muted-foreground font-semibold">{measurement.value} {measurement.unit}</p>
                         </div>
                         {index < bodyMeasurements.length - 1 && <Separator />}
                         </React.Fragment>
@@ -177,7 +239,33 @@ export function ActivityTracker() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button variant="outline" className="w-full">Update Measurements</Button>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">Update Measurements</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Update Body Measurements</DialogTitle>
+                            </DialogHeader>
+                            <div className='space-y-4 py-4'>
+                            {tempMeasurements.map((measurement, index) => (
+                                <div key={measurement.name} className="grid grid-cols-3 items-center gap-4">
+                                    <Label htmlFor={`measurement-${measurement.name}`} className="col-span-1">{measurement.name}</Label>
+                                    <Input
+                                        id={`measurement-${measurement.name}`}
+                                        type="number"
+                                        value={measurement.value}
+                                        onChange={(e) => handleMeasurementChange(index, e.target.value)}
+                                        className="col-span-2"
+                                    />
+                                </div>
+                            ))}
+                            </div>
+                            <DialogClose asChild>
+                                <Button onClick={saveMeasurements} className="w-full">Save Measurements</Button>
+                            </DialogClose>
+                        </DialogContent>
+                    </Dialog>
                 </CardFooter>
             </Card>
         </div>
