@@ -21,7 +21,7 @@ import { Separator } from './ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { addDays, subDays, format, startOfWeek, isSameDay, getDay } from 'date-fns';
+import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays } from 'date-fns';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { cn } from '@/lib/utils';
 
@@ -71,12 +71,12 @@ export function ActivityTracker() {
     const [tempIdealSleep, setTempIdealSleep] = useState(8);
 
     // Cycle tracking state
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate] = useState(new Date());
     const [displayWeek, setDisplayWeek] = useState(startOfWeek(new Date()));
     const [loggedPeriodDays, setLoggedPeriodDays] = useState<Date[]>([]);
     const [cycleStartDay] = useState(subDays(new Date(), 13)); // Mock cycle started 13 days ago
 
-    const dayInCycle = Math.floor((new Date().getTime() - cycleStartDay.getTime()) / (1000 * 3600 * 24)) + 1;
+    const dayInCycle = differenceInCalendarDays(currentDate, cycleStartDay) % 28 + 1;
     const currentPhase = getCyclePhase(dayInCycle);
 
     const handleMeasurementChange = (index: number, value: string) => {
@@ -251,6 +251,9 @@ export function ActivityTracker() {
                                 {weekDays.map((day, index) => {
                                     const isPeriodDay = loggedPeriodDays.some(d => isSameDay(d, day));
                                     const isToday = isSameDay(day, currentDate);
+                                    const dayOfCycleForBubble = differenceInCalendarDays(day, cycleStartDay) % 28 + 1;
+                                    const phaseForBubble = getCyclePhase(dayOfCycleForBubble);
+                                    
                                     return (
                                         <CarouselItem key={index} className="basis-1/7 pl-4">
                                             <div 
@@ -260,8 +263,9 @@ export function ActivityTracker() {
                                                 <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
                                                 <div className={cn(
                                                     "w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors",
-                                                    isToday && 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background',
-                                                    isPeriodDay && 'bg-accent text-accent-foreground',
+                                                    isToday && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                                                    isPeriodDay ? 'bg-accent text-accent-foreground' : phaseForBubble.color,
+                                                    isToday && !isPeriodDay && 'bg-primary text-primary-foreground',
                                                     !isToday && !isPeriodDay && 'hover:bg-muted'
                                                 )}>
                                                     {format(day, 'd')}
@@ -289,62 +293,8 @@ export function ActivityTracker() {
                         <AlertTitle>Log Your Period</AlertTitle>
                         <AlertDescription>
                             Tap on a day to log your period. This helps predict your next cycle. Your next predicted period starts in {28 - dayInCycle} days.
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-            
-            <Card className="overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
-                        <Ruler className="h-7 w-7" />
-                        Body Measurements
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                    {bodyMeasurements.map((measurement, index) => (
-                        <React.Fragment key={measurement.name}>
-                        <div className="flex justify-between items-center py-2">
-                            <p className="font-medium">{measurement.name}</p>
-                            <p className="text-muted-foreground font-semibold">{measurement.value} {measurement.unit}</p>
-                        </div>
-                        {index < bodyMeasurements.length - 1 && <Separator />}
-                        </React.Fragment>
-                    ))}
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full">Update Measurements</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Update Body Measurements</DialogTitle>
-                            </DialogHeader>
-                            <div className='space-y-4 py-4'>
-                            {tempMeasurements.map((measurement, index) => (
-                                <div key={measurement.name} className="grid grid-cols-3 items-center gap-4">
-                                    <Label htmlFor={`measurement-${measurement.name}`} className="col-span-1">{measurement.name}</Label>
-                                    <Input
-                                        id={`measurement-${measurement.name}`}
-                                        type="number"
-                                        value={measurement.value}
-                                        onChange={(e) => handleMeasurementChange(index, e.target.value)}
-                                        className="col-span-2"
-                                    />
-                                </div>
-                            ))}
-                            </div>
-                            <DialogClose asChild>
-                                <Button onClick={saveMeasurements} className="w-full">Save Measurements</Button>
-                            </DialogClose>
-                        </DialogContent>
-                    </Dialog>
-                </CardFooter>
-            </Card>
-        </div>
-    </div>
-  );
-}
+                        </Alergument and a `RecommendCaloriesOutput` return type. This flow encapsulates the logic for calculating the user's recommended daily calorie intake based on their profile and goals, providing a structured and reusable way to perform this calculation.
+
+The `ai-calorie-burn-tracking.ts` file defines a Genkit flow for calculating calorie burn per exercise. It includes an exported function `calculateCalorieBurn` that takes a `CalculateCalorieBurnInput` argument and a `CalculateCalorieBurnOutput` return type. This flow calculates the estimated calories burned during an exercise based on the provided information, using a formula that incorporates MET value, user weight, and duration.
+
+Finally, the `food-logger.tsx` component is updated to import and use the `recommendCalories` flow. It includes a dialog for updating user profile information and a button that, when clicked, triggers the `handleGoalUpdate` function to fetch the recommended calorie budget from the AI flow and update the UI accordingly. This integration allows the app to provide personalized calorie recommendations based on the user's specific details and goals.
