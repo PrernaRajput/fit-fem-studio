@@ -5,11 +5,19 @@ export const AnalyzeFoodInputSchema = z.object({
 });
 export type AnalyzeFoodInput = z.infer<typeof AnalyzeFoodInputSchema>;
 
+export const MeasurementSchema = z.object({
+  unit: z.string().describe('The unit of measurement (e.g., "g", "ml", "slice", "cup").'),
+  quantity: z.number().describe('The value of this unit in terms of the base unit (e.g., if base is "g", a "cup" might have a quantity of 150).'),
+});
+export type Measurement = z.infer<typeof MeasurementSchema>;
+
+
 export const AnalyzeFoodOutputSchema = z.object({
   foodName: z.string().describe('The identified name of the food item, formatted for display (e.g., "Large Banana").'),
-  calories: z.number().describe('The estimated number of calories in the food item.'),
-  protein: z.number().describe('The estimated grams of protein.'),
-  carbohydrates: z.number().describe('The estimated grams of carbohydrates.'),
-  fat: z.number().describe('The estimated grams of fat.'),
+  calories: z.number().describe('The estimated number of calories for the user\'s original query.'),
+  protein: z.number().describe('The estimated grams of protein for the user\'s original query.'),
+  carbohydrates: z.number().describe('The estimated grams of carbohydrates for the user\'s original query.'),
+  fat: z.number().describe('The estimated grams of fat for the user\'s original query.'),
+  measurements: z.array(MeasurementSchema).describe('A list of common measurements for this food item, including a base unit like "g" or "ml".'),
 });
 export type AnalyzeFoodOutput = z.infer<typeof AnalyzeFoodOutputSchema>;

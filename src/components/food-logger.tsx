@@ -45,24 +45,31 @@ import {
     SelectValue,
   } from '@/components/ui/select';
 import { recommendCalories, RecommendCaloriesInput } from '@/ai/ai-calorie-budget-recommendation';
-import { AnalyzeFoodOutput } from '@/lib/types';
+import { AnalyzeFoodOutput, Measurement } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { cn } from '@/lib/utils';
 
 
-type FoodItem = {
+type LoggedFoodItem = {
+    id: string;
     name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
+    // Nutritional values per base unit (e.g., per gram)
+    baseCalories: number;
+    baseProtein: number;
+    baseCarbs: number;
+    baseFat: number;
+    // User selected quantity and unit
+    quantity: number;
+    selectedUnit: string;
+    // All possible measurements for this food
+    measurements: Measurement[];
 };
   
 type MealLog = {
-    Breakfast: FoodItem[];
-    Lunch: FoodItem[];
-    Dinner: FoodItem[];
-    Snacks: FoodItem[];
+    Breakfast: LoggedFoodItem[];
+    Lunch: LoggedFoodItem[];
+    Dinner: LoggedFoodItem[];
+    Snacks: LoggedFoodItem[];
 };
 
 const foodCategories = [
@@ -72,11 +79,18 @@ const foodCategories = [
     { name: 'Snacks', icon: <BookOpen className="h-5 w-5" />, key: 'Snacks' as keyof MealLog },
 ];
 
+// Helper to calculate total calories for a logged item
+const calculateItemCalories = (item: LoggedFoodItem) => {
+    const selectedMeasurement = item.measurements.find(m => m.unit === item.selectedUnit);
+    if (!selectedMeasurement) return 0;
+    return item.baseCalories * selectedMeasurement.quantity * item.quantity;
+};
+
+
 export function FoodLogger() {
     const { toast } = useToast();
     const [mealLog, setMealLog] = useState<MealLog>({ Breakfast: [], Lunch: [], Dinner: [], Snacks: [] });
     const [calories, setCalories] = useState({
-        consumed: 1200,
         budget: 2000,
         burned: 300,
     });
@@ -101,7 +115,7 @@ export function FoodLogger() {
     const [searchResult, setSearchResult] = useState<AnalyzeFoodOutput | null>(null);
     const [activeCategory, setActiveCategory] = useState<keyof MealLog | null>(null);
 
-    const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + item.calories, 0);
+    const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + calculateItemCalories(item), 0);
     const remaining = calories.budget - consumedCalories + calories.burned;
     const consumedPercentage = (consumedCalories / calories.budget) * 100;
     const waterPercentage = (water.consumed / water.goal) * 100;
@@ -152,13 +166,23 @@ export function FoodLogger() {
     
     const addFoodItemToLog = () => {
         if (searchResult && activeCategory) {
-            const newFoodItem: FoodItem = {
+            const baseMeasurement = searchResult.measurements.find(m => m.unit === 'g' || m.unit === 'ml') || searchResult.measurements[0];
+            const queryMeasurement = searchResult.measurements.find(m => m.unit !== 'g' && m.unit !== 'ml') || baseMeasurement;
+
+            const baseTotal = queryMeasurement.quantity;
+
+            const newFoodItem: LoggedFoodItem = {
+                id: `${new Date().getTime()}-${searchResult.foodName}`,
                 name: searchResult.foodName,
-                calories: searchResult.calories,
-                protein: searchResult.protein,
-                carbs: searchResult.carbohydrates,
-                fat: searchResult.fat,
+                baseCalories: searchResult.calories / baseTotal,
+                baseProtein: searchResult.protein / baseTotal,
+                baseCarbs: searchResult.carbohydrates / baseTotal,
+                baseFat: searchResult.fat / baseTotal,
+                quantity: 1,
+                selectedUnit: queryMeasurement.unit,
+                measurements: searchResult.measurements,
             };
+
             setMealLog(prev => ({
                 ...prev,
                 [activeCategory]: [...prev[activeCategory], newFoodItem],
@@ -167,12 +191,19 @@ export function FoodLogger() {
         }
     };
 
-    const removeFoodItem = (category: keyof MealLog, index: number) => {
+    const removeFoodItem = (category: keyof MealLog, id: string) => {
         setMealLog(prev => ({
             ...prev,
-            [category]: prev[category].filter((_, i) => i !== index),
+            [category]: prev[category].filter((item) => item.id !== id),
         }));
     };
+
+    const updateFoodItem = (category: keyof MealLog, id: string, updatedValues: Partial<LoggedFoodItem>) => {
+        setMealLog(prev => ({
+            ...prev,
+            [category]: prev[category].map(item => item.id === id ? {...item, ...updatedValues} : item)
+        }));
+    }
 
   return (
     <div className="container mx-auto px-4">
@@ -268,7 +299,7 @@ export function FoodLogger() {
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-sm text-muted-foreground">Consumed</p>
-              <p className="text-2xl font-bold">{consumedCalories}</p>
+              <p className="text-2xl font-bold">{Math.round(consumedCalories)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Budget</p>
@@ -291,7 +322,7 @@ export function FoodLogger() {
                 />
             </div>
             <div className="mt-2 text-center text-sm font-medium text-primary">
-              {Math.max(0, remaining)} Calories Remaining
+              {Math.max(0, Math.round(remaining))} Calories Remaining
             </div>
           </div>
 
@@ -365,16 +396,41 @@ export function FoodLogger() {
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                     {mealLog[category.key].length > 0 ? (
-                        <ul className="space-y-2">
-                            {mealLog[category.key].map((item, index) => (
-                                <li key={index} className="flex justify-between items-center text-sm p-2 rounded-md bg-background">
-                                    <div>
+                        <ul className="space-y-3">
+                            {mealLog[category.key].map((item) => (
+                                <li key={item.id} className="text-sm p-3 rounded-md bg-background">
+                                    <div className="flex justify-between items-center">
                                         <p className="font-semibold capitalize">{item.name}</p>
-                                        <p className="text-xs text-muted-foreground">{item.calories} kcal</p>
+                                        <div className='flex items-center gap-2'>
+                                            <p className="font-bold text-primary">{Math.round(calculateItemCalories(item))} kcal</p>
+                                            <Button variant="ghost" size="icon" onClick={() => removeFoodItem(category.key, item.id)}>
+                                                <X className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => removeFoodItem(category.key, index)}>
-                                        <X className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Input
+                                            type="number"
+                                            value={item.quantity}
+                                            onChange={(e) => updateFoodItem(category.key, item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                                            className="w-20 h-9"
+                                            min="0"
+                                            step="0.1"
+                                        />
+                                        <Select
+                                            value={item.selectedUnit}
+                                            onValueChange={(unit) => updateFoodItem(category.key, item.id, { selectedUnit: unit })}
+                                        >
+                                            <SelectTrigger className="w-[180px] h-9">
+                                                <SelectValue placeholder="Select measurement" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {item.measurements.map(m => (
+                                                    <SelectItem key={m.unit} value={m.unit}>{m.unit}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
