@@ -1,11 +1,189 @@
+'use client';
+
 import { WorkoutRoutine } from '@/components/workout-routine';
 import { Footer } from '@/components/footer';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+const defaultExercises = [
+    {
+      name: 'Jumping Jacks',
+      duration: 30,
+      gifUrl: 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lvb3VmOTUweTZ1d3pmYzBwajBhZGR3c2JrMzQxMWp2dGhwOG80byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ckMk3RKUK29lziaspI/giphy.gif',
+      youtubeUrl: 'https://www.youtube.com/embed/c4DAnQ6DtF8',
+      calories: 25,
+      imageHint: 'jumping jacks',
+    },
+    {
+      name: 'Rest',
+      duration: 15,
+      gifUrl: 'https://picsum.photos/seed/rest1/600/400',
+      youtubeUrl: '',
+      calories: 0,
+      imageHint: 'woman resting',
+    },
+    {
+      name: 'Squats',
+      duration: 45,
+      gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjY2Mnl4OTQ1ZmdudWd0MWlpY3hlcmNsM3g4NmFjdnc2ZXNuZnNjNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1C1ipHPEs4Vjwglwza/giphy.gif',
+      youtubeUrl: 'https://www.youtube.com/embed/x_t89sI3_Hw',
+      calories: 40,
+      imageHint: 'woman squats',
+    },
+      {
+      name: 'Rest',
+      duration: 15,
+      gifUrl: 'https://picsum.photos/seed/rest2/600/400',
+      youtubeUrl: '',
+      calories: 0,
+      imageHint: 'woman relaxing',
+    },
+    {
+      name: 'Plank',
+      duration: 60,
+      gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTlkMWg0NWwxczRpc293ZjkxYnc3cDRldjZndXA0czAwNDNycmJvZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/d3mlADRlF7SMFQRy/giphy.gif',
+      youtubeUrl: 'https://www.youtube.com/embed/pD3-e4I_j4I',
+      calories: 30,
+      imageHint: 'woman planking',
+    },
+];
+
+type Exercise = {
+  name: string;
+  duration: number;
+  gifUrl: string;
+  youtubeUrl: string;
+  calories: number;
+  imageHint: string;
+};
+
+// This function will parse the text for a given day into structured exercise data.
+// It's designed to be robust against variations in the AI's output format.
+function parseTodaysWorkout(plan: string, today: string): Exercise[] {
+  const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?\\s*([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:\\*\\*)?:?|$)`, 'i');
+  const match = plan.match(dayRegex);
+
+  if (!match || !match[1]) {
+    // If today's workout is rest or not found, return an empty array or a rest block
+    if (plan.toLowerCase().includes(today.toLowerCase()) && plan.toLowerCase().includes('rest')) {
+        return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
+    }
+    return [];
+  }
+
+  const todaysPlan = match[1];
+  const exercises: Exercise[] = [];
+
+  // Regex to find lines like "- Squats: 3 sets of 12 reps" or "- Jumping Jacks (30 seconds)"
+  const exerciseRegex = /-\s*(.*?)(?:\s*\((.*?)\)|\s*:\s*(\d+)\s*sets?.*of\s*(\d+)\s*reps?)/gi;
+  let exerciseMatch;
+
+  while ((exerciseMatch = exerciseRegex.exec(todaysPlan)) !== null) {
+    const name = exerciseMatch[1].trim();
+    let duration = 45; // Default duration
+
+    if (exerciseMatch[2]) { // Duration format like "(30 seconds)"
+      const durationMatch = exerciseMatch[2].match(/(\d+)\s*seconds?/);
+      if (durationMatch) {
+        duration = parseInt(durationMatch[1], 10);
+      }
+    } else if (exerciseMatch[3] && exerciseMatch[4]) { // Reps format like "3 sets of 12 reps"
+      const sets = parseInt(exerciseMatch[3], 10);
+      const reps = parseInt(exerciseMatch[4], 10);
+      // Estimate duration: ~3 seconds per rep, 60s rest between sets
+      duration = (sets * reps * 3) + ((sets - 1) * 60);
+      // We are only handling duration based workouts for now, so we will simplify this.
+      duration = 45;
+    }
+    
+    // For now, use placeholder GIFs and data
+    exercises.push({
+      name,
+      duration,
+      gifUrl: `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
+      youtubeUrl: '',
+      calories: Math.floor(duration * 0.7), // Rough calorie estimate
+      imageHint: name.toLowerCase(),
+    });
+
+    // Add a rest period after each exercise
+    exercises.push({
+      name: 'Rest',
+      duration: 15,
+      gifUrl: 'https://picsum.photos/seed/rest/600/400',
+      youtubeUrl: '',
+      calories: 0,
+      imageHint: 'woman resting',
+    });
+  }
+  
+  // Remove the last rest period
+  if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
+    exercises.pop();
+  }
+
+  return exercises;
+}
+
 
 export default function WorkoutPage() {
+  const [todaysExercises, setTodaysExercises] = useState<Exercise[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const plan = sessionStorage.getItem('workoutPlan');
+    if (plan) {
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const parsedExercises = parseTodaysWorkout(plan, today);
+      if (parsedExercises.length > 0) {
+        setTodaysExercises(parsedExercises);
+      } else {
+        // Fallback to default if parsing fails or it's a rest day with no specific exercises
+        setTodaysExercises(defaultExercises);
+      }
+    } else {
+      setTodaysExercises(defaultExercises);
+    }
+    setIsLoading(false);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-dvh bg-background items-center justify-center">
+        <p>Loading your workout...</p>
+      </div>
+    );
+  }
+  
+  if (!todaysExercises || todaysExercises.length === 0 || (todaysExercises.length === 1 && todaysExercises[0].name === 'Rest Day')) {
+    return (
+       <div className="flex flex-col min-h-dvh bg-background">
+        <main className="flex-1 py-8 flex items-center justify-center">
+          <Card className="max-w-md mx-auto text-center p-8">
+            <CardHeader>
+              <CardTitle className="text-3xl font-bold text-primary">It's Your Rest Day!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Your personalized plan has today as a rest day. Enjoy your recovery!
+              </p>
+              <Link href="/" passHref>
+                <Button className="mt-6">Go to Homepage</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-dvh bg-background">
       <main className="flex-1 py-8">
-        <WorkoutRoutine />
+        <WorkoutRoutine initialExercises={todaysExercises} />
       </main>
       <Footer />
     </div>

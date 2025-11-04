@@ -29,57 +29,28 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 
-const exercises = [
-  {
-    name: 'Jumping Jacks',
-    duration: 30,
-    gifUrl: 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3lvb3VmOTUweTZ1d3pmYzBwajBhZGR3c2JrMzQxMWp2dGhwOG80byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ckMk3RKUK29lziaspI/giphy.gif',
-    youtubeUrl: 'https://www.youtube.com/embed/c4DAnQ6DtF8',
-    calories: 25,
-    imageHint: 'jumping jacks',
-  },
-  {
-    name: 'Rest',
-    duration: 15,
-    gifUrl: 'https://picsum.photos/seed/rest1/600/400',
-    youtubeUrl: '',
-    calories: 0,
-    imageHint: 'woman resting',
-  },
-  {
-    name: 'Squats',
-    duration: 45,
-    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjY2Mnl4OTQ1ZmdudWd0MWlpY3hlcmNsM3g4NmFjdnc2ZXNuZnNjNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1C1ipHPEs4Vjwglwza/giphy.gif',
-    youtubeUrl: 'https://www.youtube.com/embed/x_t89sI3_Hw',
-    calories: 40,
-    imageHint: 'woman squats',
-  },
-    {
-    name: 'Rest',
-    duration: 15,
-    gifUrl: 'https://picsum.photos/seed/rest2/600/400',
-    youtubeUrl: '',
-    calories: 0,
-    imageHint: 'woman relaxing',
-  },
-  {
-    name: 'Plank',
-    duration: 60,
-    gifUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTlkMWg0NWwxczRpc293ZjkxYnc3cDRldjZndXA0czAwNDNycmJvZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/d3mlADRlF7SMFQRy/giphy.gif',
-    youtubeUrl: 'https://www.youtube.com/embed/pD3-e4I_j4I',
-    calories: 30,
-    imageHint: 'woman planking',
-  },
-];
+type Exercise = {
+  name: string;
+  duration: number;
+  gifUrl: string;
+  youtubeUrl: string;
+  calories: number;
+  imageHint: string;
+};
 
-export function WorkoutRoutine() {
+type WorkoutRoutineProps = {
+  initialExercises: Exercise[];
+};
+
+export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(exercises[0].duration);
   const [isPaused, setIsPaused] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [workoutFinished, setWorkoutFinished] = useState(false);
   const [showYoutube, setShowYoutube] = useState(false);
-  const [routine, setRoutine] = useState(exercises);
+  
+  const [routine, setRoutine] = useState(initialExercises);
+  const [timeLeft, setTimeLeft] = useState(initialExercises[0]?.duration ?? 0);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -100,8 +71,8 @@ export function WorkoutRoutine() {
           return 0;
         }
 
-        if (prevTime === 6) {
-          speak('5 seconds left');
+        if (prevTime > 1 && prevTime <= 6) {
+          speak((prevTime - 1).toString());
         }
 
         return prevTime - 1;
@@ -113,13 +84,15 @@ export function WorkoutRoutine() {
 
   const speak = (text: string) => {
     if ('speechSynthesis' in window && !isMuted) {
+      // Cancel any ongoing speech to prevent overlap
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       window.speechSynthesis.speak(utterance);
     }
   };
 
   const currentExercise = routine[currentExerciseIndex];
-  const progress = (currentExercise.duration - timeLeft) / currentExercise.duration * 100;
+  const progress = currentExercise ? (currentExercise.duration - timeLeft) / currentExercise.duration * 100 : 0;
 
   const handleSkip = () => {
     if (currentExerciseIndex < routine.length - 1) {
@@ -131,12 +104,16 @@ export function WorkoutRoutine() {
   };
 
   const handlePlayPause = () => {
-      if(timeLeft === 0 && currentExerciseIndex === routine.length -1) return;
-      setIsPaused(!isPaused);
-      if (isPaused) {
-        speak(`Starting ${currentExercise.name}`);
-      } else {
+      if(workoutFinished || !currentExercise) return;
+      
+      const newIsPaused = !isPaused;
+      setIsPaused(newIsPaused);
+
+      if (newIsPaused) {
         speak('Workout paused');
+        window.speechSynthesis.cancel();
+      } else {
+        speak(`Starting ${currentExercise.name}`);
       }
   };
   
@@ -148,6 +125,14 @@ export function WorkoutRoutine() {
         setTimeLeft(newDuration);
     }
   };
+
+  const restartWorkout = () => {
+    setRoutine(initialExercises);
+    setCurrentExerciseIndex(0);
+    setTimeLeft(initialExercises[0]?.duration ?? 0);
+    setWorkoutFinished(false);
+    setIsPaused(true);
+  }
 
   if (workoutFinished) {
     const totalTime = routine.reduce((acc, curr) => acc + curr.duration, 0);
@@ -168,18 +153,28 @@ export function WorkoutRoutine() {
                 </Alert>
             </CardContent>
             <CardFooter className="flex-col gap-4">
-                <Button onClick={() => {
-                    setCurrentExerciseIndex(0);
-                    setTimeLeft(routine[0].duration);
-                    setWorkoutFinished(false);
-                    setIsPaused(true);
-                }} size="lg" className="w-full">
+                <Button onClick={restartWorkout} size="lg" className="w-full">
                     Start Again
                 </Button>
             </CardFooter>
         </Card>
       </div>
     );
+  }
+
+  if (!currentExercise) {
+    return (
+        <div className="container mx-auto px-4 text-center">
+          <Card className="max-w-md mx-auto shadow-lg border-primary/20">
+              <CardHeader>
+                  <CardTitle className="text-2xl font-bold text-primary">No Workout Loaded</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>There are no exercises in the current routine.</p>
+              </CardContent>
+          </Card>
+        </div>
+    )
   }
 
   return (

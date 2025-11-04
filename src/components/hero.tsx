@@ -1,12 +1,32 @@
+'use client';
+
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar, Footprints, Utensils } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function Hero() {
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-image');
+  const [hasWorkoutPlan, setHasWorkoutPlan] = useState(false);
+
+  useEffect(() => {
+    // Check if a workout plan exists in sessionStorage on the client side
+    if (typeof window !== 'undefined') {
+      const plan = sessionStorage.getItem('workoutPlan');
+      setHasWorkoutPlan(!!plan);
+
+      // Also listen for custom event when plan is generated
+      const handlePlanGenerated = () => setHasWorkoutPlan(true);
+      window.addEventListener('workoutPlanGenerated', handlePlanGenerated);
+
+      return () => {
+        window.removeEventListener('workoutPlanGenerated', handlePlanGenerated);
+      };
+    }
+  }, []);
 
   return (
     <section className="relative w-full h-[400px] md:h-[500px] text-white">
@@ -32,10 +52,15 @@ export function Hero() {
           Your personalized AI companion for fitness, strength, and well-being.
         </p>
         <div className="flex flex-wrap justify-center gap-4 mt-8">
-            <Link href="/workout">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6">
-                    Start Workout
-                </Button>
+            <Link href="/workout" passHref>
+              <Button 
+                asChild={false} 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6"
+                aria-label={hasWorkoutPlan ? "Start Your Generated Workout" : "Start a Default Workout"}
+              >
+                Start Workout
+              </Button>
             </Link>
             <Link href="/nutrition">
                 <Button size="lg" variant="outline" className="bg-black/20 hover:bg-black/40 text-white border-white/50 hover:border-white/80 font-bold text-lg px-8 py-6">

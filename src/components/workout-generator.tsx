@@ -24,7 +24,11 @@ export function WorkoutGenerator() {
     
     setWorkoutPlan(plan);
     
-    if (plan) {
+    if (plan && plan.weeklyWorkoutPlan) {
+      // Save to session storage and notify other components
+      sessionStorage.setItem('workoutPlan', plan.weeklyWorkoutPlan);
+      window.dispatchEvent(new CustomEvent('workoutPlanGenerated'));
+
       // Smooth scroll to results
       setTimeout(() => {
         document.getElementById('workout-plan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
