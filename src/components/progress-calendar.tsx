@@ -140,7 +140,10 @@ export function ProgressCalendar() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/30 rounded-lg p-8">
+              <div
+                className="flex items-center justify-center text-muted-foreground bg-muted/30 rounded-lg p-8"
+                style={{ height: '300px' }}
+              >
                 <p>No data for this day.</p>
               </div>
             )}
