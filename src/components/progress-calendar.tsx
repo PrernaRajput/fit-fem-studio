@@ -37,7 +37,11 @@ export function ProgressCalendar() {
 
   const dailyStatsMap = useMemo(() => {
     if (!dailyStatsData) return new Map<string, WithId<DailyStats>>();
-    return new Map(dailyStatsData.map(stat => [stat.date, stat]));
+    return new Map(
+      dailyStatsData
+        .filter(stat => stat && stat.date) // Filter out items with no date
+        .map(stat => [stat.date, stat])
+    );
   }, [dailyStatsData]);
 
   const selectedDayStats: DailyStats | null = date
@@ -49,7 +53,9 @@ export function ProgressCalendar() {
   };
   
   const daysWithData = useMemo(() => {
-    return Array.from(dailyStatsMap.keys()).map(dateStr => new Date(dateStr.replace(/-/g, '/')));
+    return Array.from(dailyStatsMap.keys())
+      .filter(dateStr => !!dateStr) // Ensure no undefined keys are processed
+      .map(dateStr => new Date(dateStr.replace(/-/g, '/')));
   }, [dailyStatsMap]);
 
 
@@ -134,7 +140,7 @@ export function ProgressCalendar() {
             ) : (
               <div
                 className="flex items-center justify-center h-full text-muted-foreground bg-muted/30 rounded-lg p-8"
-                style={{ minHeight: '268px' }}
+                style={{ height: '300px' }}
               >
                 <p>{isLoading ? 'Loading stats...' : 'No data for this day.'}</p>
               </div>
@@ -145,5 +151,3 @@ export function ProgressCalendar() {
     </div>
   );
 }
-
-    
