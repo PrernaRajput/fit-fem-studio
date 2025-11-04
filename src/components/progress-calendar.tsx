@@ -11,6 +11,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Flame, Apple, Droplets, Dumbbell } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type DailyStats = {
   caloriesConsumed: number;
@@ -56,7 +57,7 @@ export function ProgressCalendar() {
     const dateKey = format(dayDate, 'yyyy-MM-dd');
     const hasData = mockData[dateKey];
     return (
-      <div className="relative h-9 w-9 flex items-center justify-center">
+      <div className={cn("relative h-9 w-9 flex items-center justify-center", dayDate.getTime() > new Date().getTime() ? 'pointer-events-none opacity-50' : '')}>
         {format(dayDate, 'd')}
         {hasData && (
           <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
@@ -86,6 +87,7 @@ export function ProgressCalendar() {
               components={{
                 Day: DayWithDot,
               }}
+              disabled={(day) => day > new Date()}
             />
           </div>
           <div className="flex-grow">
