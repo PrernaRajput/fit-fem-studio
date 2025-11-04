@@ -64,7 +64,7 @@ type Exercise = {
 // This function will parse the text for a given day into structured exercise data.
 // It's designed to be robust against variations in the AI's output format.
 function parseTodaysWorkout(plan: string, today: string): Exercise[] {
-    const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Dietary Guidelines)(?:\\*\\*)?:?|$)`, 'i');
+    const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Dietary Guidelines|Justification)(?:\\*\\*)?:?|$)`, 'i');
     const match = plan.match(dayRegex);
 
   if (!match || !match[1] || match[1].trim().toLowerCase().includes('rest')) {
@@ -76,7 +76,7 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
   const exercises: Exercise[] = [];
 
   // Regex to find lines like "- Squats: 3 sets of 12 reps" or "- Jumping Jacks (30 seconds)"
-  const exerciseRegex = /-\s*(.*?)(?:\s*\((.*?)\)|\s*:\s*(\d+)\s*sets?.*of\s*(\d+)\s*reps?)/gi;
+  const exerciseRegex = /-\s*(.*?)(?:\s*\((.*?)\)|\s*:\s*(\d+)\s*sets?.*of\s*([\d-]+)\s*reps?)/gi;
   let exerciseMatch;
 
   while ((exerciseMatch = exerciseRegex.exec(todaysPlan)) !== null) {
@@ -122,8 +122,13 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
     exercises.pop();
   }
   
-  if (exercises.length === 0 && todaysPlan.trim().length > 0) {
-     return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
+  if (exercises.length === 0 && todaysPlan.trim().length > 0 && !todaysPlan.trim().toLowerCase().includes('rest')) {
+    // Fallback if regex fails but there's content.
+    return defaultExercises;
+  }
+  
+  if(exercises.length === 0) {
+    return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
   }
 
 
