@@ -27,6 +27,7 @@ import {
   ChevronDown,
   X,
   Loader2,
+  Settings,
 } from 'lucide-react';
 import {
   Dialog,
@@ -44,7 +45,7 @@ import {
     SelectValue,
   } from '@/components/ui/select';
 import { recommendCalories, RecommendCaloriesInput } from '@/ai/ai-calorie-budget-recommendation';
-import { AnalyzeFoodOutput } from '@/ai/ai-food-logger';
+import { AnalyzeFoodOutput } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
@@ -80,6 +81,7 @@ export function FoodLogger() {
         burned: 300,
     });
     const [water, setWater] = useState({ consumed: 4, goal: 8 });
+    const [tempWaterGoal, setTempWaterGoal] = useState(8);
     const [userProfile, setUserProfile] = useState<RecommendCaloriesInput>({
         goal: 'weight loss',
         dailyCaloriesBurned: 300,
@@ -118,6 +120,10 @@ export function FoodLogger() {
         setIsGoalDialogOpen(false);
     }
     
+    const saveWaterGoal = () => {
+        setWater(prev => ({ ...prev, goal: tempWaterGoal }));
+    };
+
     const openFoodLogDialog = (category: keyof MealLog) => {
         setActiveCategory(category);
         setSearchResult(null);
@@ -399,6 +405,35 @@ export function FoodLogger() {
                     <Button variant="ghost" size="icon" onClick={() => handleWaterChange(1)}>
                         <Plus className="h-4 w-4" />
                     </Button>
+                     <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                            <DialogTitle>Set Water Goal</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="water-goal" className="text-right">
+                                    Glasses
+                                    </Label>
+                                    <Input
+                                    id="water-goal"
+                                    type="number"
+                                    value={tempWaterGoal}
+                                    onChange={(e) => setTempWaterGoal(Number(e.target.value))}
+                                    className="col-span-3"
+                                    />
+                                </div>
+                            </div>
+                            <DialogClose asChild>
+                                <Button onClick={saveWaterGoal}>Save changes</Button>
+                            </DialogClose>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
