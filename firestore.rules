@@ -75,7 +75,7 @@ service cloud.firestore {
      *   resource.data.id: 'user_abc'
      * @principle Enforces document ownership for writes and restricts access to a user's own data.
      */
-    match /users/{userId}/userProfile {
+    match /users/{userId}/userProfile/{docId} {
       // Read Rules
       allow get: if isOwner(userId);
       allow list: if false;
