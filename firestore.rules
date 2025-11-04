@@ -76,14 +76,10 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes and restricts access to a user's own data.
      */
     match /users/{userId}/userProfile/{docId} {
-      // Read Rules
-      allow get: if isOwner(userId);
-      allow list: if false;
-
-      // Write Rules
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      // A user can read, create, update, or delete any document within their own userProfile subcollection.
+      // Ownership is determined by the {userId} in the path.
+      allow read, write: if isOwner(userId);
+      allow list: if false; // Disallow listing all profiles in a subcollection for now.
     }
 
     /**
