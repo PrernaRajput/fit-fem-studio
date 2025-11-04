@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -10,9 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Flame, Apple, Droplets, Dumbbell } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { DayProps } from 'react-day-picker';
+import { format, isSameDay } from 'date-fns';
 
 type DailyStats = {
   caloriesConsumed: number;
@@ -43,20 +41,6 @@ const mockData: { [key: string]: DailyStats } = {
   },
 };
 
-function DayWithDot(props: DayProps) {
-  const { date } = props;
-  const dateKey = format(date, 'yyyy-MM-dd');
-  const hasData = !!mockData[dateKey] && date < new Date();
-  
-  return (
-    <div className="relative">
-      {hasData && (
-        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
-      )}
-    </div>
-  );
-}
-
 export function ProgressCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
 
@@ -65,9 +49,18 @@ export function ProgressCalendar() {
     : null;
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
+    // Only update if the selected date has changed
+    if (selectedDate && (!date || !isSameDay(selectedDate, date))) {
+        setDate(selectedDate);
+    }
   };
   
+  // Memoize the dates that have data to avoid recalculating on every render
+  const daysWithData = useMemo(() => {
+    return Object.keys(mockData).map(dateStr => new Date(dateStr.replace(/-/g, '/')));
+  }, []);
+
+
   return (
     <div className="container mx-auto px-4">
       <Card className="max-w-2xl mx-auto overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
@@ -81,13 +74,32 @@ export function ProgressCalendar() {
         </CardHeader>
         <CardContent className="p-6 space-y-6 md:flex md:flex-row md:gap-8 md:space-y-0">
           <div className="flex-shrink-0 flex justify-center">
+            <style>{`
+              .day-with-dot {
+                position: relative;
+              }
+              .day-with-dot::after {
+                content: '';
+                position: absolute;
+                bottom: 4px;
+                left: 50%;
+                transform: translateX(-50%);
+                height: 6px;
+                width: 6px;
+                border-radius: 50%;
+                background-color: hsl(var(--primary));
+              }
+            `}</style>
             <Calendar
               mode="single"
               selected={date}
               onSelect={handleDateSelect}
               className="rounded-md border"
-              components={{
-                Day: DayWithDot,
+              modifiers={{
+                hasData: daysWithData,
+              }}
+              modifiersClassNames={{
+                hasData: 'day-with-dot',
               }}
               disabled={(day) => day > new Date()}
             />
