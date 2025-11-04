@@ -12,7 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Flame, Apple, Droplets, Dumbbell } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { DayProps } from 'react-day-picker';
+import { DayProps, DayPicker } from 'react-day-picker';
 
 type DailyStats = {
   caloriesConsumed: number;
@@ -54,21 +54,21 @@ export function ProgressCalendar() {
     setDate(selectedDate);
   };
   
-  const DayWithDot = ({ date: dayDate, displayMonth, ...props }: DayProps) => {
-    const dateKey = format(dayDate, 'yyyy-MM-dd');
-    const hasData = mockData[dateKey];
+  const DayWithDot = (props: DayProps) => {
+    const { date, displayMonth } = props;
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const hasData = !!mockData[dateKey];
+  
     return (
-      <div
-        className={cn("relative h-9 w-9 flex items-center justify-center")}
-        {...props}
-      >
-        {format(dayDate, 'd')}
+      <div className={cn('relative h-9 w-9 flex items-center justify-center')}>
         {hasData && (
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
         )}
+        <DayPicker.Day {...props} />
       </div>
     );
   };
+
 
   return (
     <div className="container mx-auto px-4">
