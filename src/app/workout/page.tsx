@@ -67,72 +67,69 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
     const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Dietary Guidelines|Justification)(?:\\*\\*)?:?|$)`, 'i');
     const match = plan.match(dayRegex);
 
-  if (!match || !match[1] || match[1].trim().toLowerCase().includes('rest')) {
-    // If today's workout is rest or not found, return a rest block
-     return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
-  }
+    if (!match || !match[1] || match[1].trim().toLowerCase().includes('rest')) {
+        return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
+    }
 
-  const todaysPlan = match[1];
-  const exercises: Exercise[] = [];
+    const todaysPlan = match[1];
+    const exercises: Exercise[] = [];
+    
+    const lines = todaysPlan.split('\n').filter(line => line.trim().length > 0 && (line.includes('*') || line.includes('-')));
 
-  // Regex to find lines like "- Squats: 3 sets of 12 reps" or "- Jumping Jacks (30 seconds)"
-  const exerciseRegex = /-\s*(.*?)(?:\s*\((.*?)\)|\s*:\s*(\d+)\s*sets?.*of\s*([\d-]+)\s*reps?)/gi;
-  let exerciseMatch;
+    for (const line of lines) {
+        // Clean up the line: remove markdown like '*' or leading '-'
+        let cleanedLine = line.replace(/(\*|-)\s*/, '').trim();
 
-  while ((exerciseMatch = exerciseRegex.exec(todaysPlan)) !== null) {
-    const name = exerciseMatch[1].trim();
-    let duration = 45; // Default duration
+        // Extract exercise name (part before colon or parenthesis)
+        const nameMatch = cleanedLine.match(/^(.*?)(?:\s*\(|:)/);
+        const name = nameMatch ? nameMatch[1].trim().replace(/\*+/g, '') : cleanedLine.replace(/\*+/g, '');
+        if (!name) continue;
 
-    if (exerciseMatch[2]) { // Duration format like "(30 seconds)"
-      const durationMatch = exerciseMatch[2].match(/(\d+)\s*seconds?/);
-      if (durationMatch) {
-        duration = parseInt(durationMatch[1], 10);
-      }
-    } else if (exerciseMatch[3] && exerciseMatch[4]) { // Reps format like "3 sets of 12 reps"
-      // This is a rep-based exercise. We'll assign a standard duration for now as the timer is duration-based.
-      // A more complex implementation could handle reps differently.
-      duration = 45;
+        let duration = 45; // Default duration
+
+        // Try to find duration like "(30 seconds)"
+        const durationMatch = cleanedLine.match(/\((\d+)\s*seconds?\)/i);
+        if (durationMatch) {
+            duration = parseInt(durationMatch[1], 10);
+        }
+
+        const defaultExercise = defaultExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+
+        exercises.push({
+            name,
+            duration,
+            gifUrl: defaultExercise?.gifUrl || `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
+            youtubeUrl: defaultExercise?.youtubeUrl || '',
+            calories: Math.floor(duration * 0.7), // Rough calorie estimate
+            imageHint: defaultExercise?.imageHint || name.toLowerCase(),
+        });
+
+        // Add a rest period after each exercise
+        exercises.push({
+            name: 'Rest',
+            duration: 15,
+            gifUrl: 'https://picsum.photos/seed/rest/600/400',
+            youtubeUrl: '',
+            calories: 0,
+            imageHint: 'woman resting',
+        });
+    }
+
+    // Remove the last rest period if it exists
+    if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
+        exercises.pop();
     }
     
-    // For now, use placeholder GIFs and data, trying to match default exercises where possible
-    const defaultExercise = defaultExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+    if (exercises.length === 0) {
+      if (todaysPlan.trim().length > 0 && !todaysPlan.trim().toLowerCase().includes('rest')) {
+          // Fallback if parsing fails but there's content.
+          return defaultExercises;
+      }
+      // If no exercises were found, it's a rest day.
+      return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
+    }
 
-    exercises.push({
-      name,
-      duration,
-      gifUrl: defaultExercise?.gifUrl || `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
-      youtubeUrl: defaultExercise?.youtubeUrl || '',
-      calories: Math.floor(duration * 0.7), // Rough calorie estimate
-      imageHint: defaultExercise?.imageHint || name.toLowerCase(),
-    });
-
-    // Add a rest period after each exercise
-    exercises.push({
-      name: 'Rest',
-      duration: 15,
-      gifUrl: 'https://picsum.photos/seed/rest/600/400',
-      youtubeUrl: '',
-      calories: 0,
-      imageHint: 'woman resting',
-    });
-  }
-  
-  // Remove the last rest period if it exists
-  if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
-    exercises.pop();
-  }
-  
-  if (exercises.length === 0 && todaysPlan.trim().length > 0 && !todaysPlan.trim().toLowerCase().includes('rest')) {
-    // Fallback if regex fails but there's content.
-    return defaultExercises;
-  }
-  
-  if(exercises.length === 0) {
-    return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
-  }
-
-
-  return exercises;
+    return exercises;
 }
 
 
