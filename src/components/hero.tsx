@@ -6,28 +6,12 @@ import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar, Footprints, Utensils, UserPlus, LogIn } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useUser } from '@/firebase';
 
 export function Hero() {
   const { user, isLoading } = useUser();
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-image');
-  const [hasWorkoutPlan, setHasWorkoutPlan] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const plan = sessionStorage.getItem('workoutPlan');
-      setHasWorkoutPlan(!!plan);
-
-      const handlePlanGenerated = () => setHasWorkoutPlan(true);
-      window.addEventListener('workoutPlanGenerated', handlePlanGenerated);
-
-      return () => {
-        window.removeEventListener('workoutPlanGenerated', handlePlanGenerated);
-      };
-    }
-  }, []);
-
+  
   return (
     <section className="relative w-full h-[400px] md:h-[500px] text-white">
       {heroImage && (
@@ -59,7 +43,7 @@ export function Hero() {
                     asChild={false} 
                     size="lg" 
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6"
-                    aria-label={hasWorkoutPlan ? "Start Your Generated Workout" : "Start a Default Workout"}
+                    aria-label={"Start Workout"}
                   >
                     Start Workout
                   </Button>

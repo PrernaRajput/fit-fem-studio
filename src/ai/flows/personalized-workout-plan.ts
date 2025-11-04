@@ -62,7 +62,16 @@ Goals: {{{goals}}}
 Available Equipment: {{{availableEquipment}}}
 Dietary Preferences: {{{dietaryPreferences}}}
 
-The workout plan should be detailed and include specific exercises, sets, reps, and rest times. Also, provide a justification for why this plan is effective for the user goals. Take dietary preferences into account and provide some basic guidelines.
+Structure your response with the following sections EXACTLY as written below, with content under each:
+1.  **Justification:** Start with this exact keyword. Provide a brief justification for why this plan is effective for the user's goals.
+2.  **Monday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+3.  **Tuesday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+4.  **Wednesday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+5.  **Thursday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+6.  **Friday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+7.  **Saturday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times.
+8.  **Sunday:** Start with this exact keyword. Detail the exercises, sets, reps, and rest times (often a rest day).
+9.  **Dietary Guidelines:** Start with this exact keyword. Provide some basic dietary guidelines that align with the user's goals and preferences.
 `,
 });
 

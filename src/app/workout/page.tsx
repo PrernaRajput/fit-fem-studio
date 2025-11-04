@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 const defaultExercises = [
     {
@@ -62,15 +64,12 @@ type Exercise = {
 // This function will parse the text for a given day into structured exercise data.
 // It's designed to be robust against variations in the AI's output format.
 function parseTodaysWorkout(plan: string, today: string): Exercise[] {
-  const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?\\s*([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:\\*\\*)?:?|$)`, 'i');
-  const match = plan.match(dayRegex);
+    const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Dietary Guidelines)(?:\\*\\*)?:?|$)`, 'i');
+    const match = plan.match(dayRegex);
 
-  if (!match || !match[1]) {
+  if (!match || !match[1] || match[1].trim().toLowerCase().includes('rest')) {
     // If today's workout is rest or not found, return a rest block
-    if (plan.toLowerCase().includes(today.toLowerCase()) && plan.toLowerCase().includes('rest')) {
-        return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
-    }
-    return [];
+     return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
   }
 
   const todaysPlan = match[1];
@@ -122,36 +121,45 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
   if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
     exercises.pop();
   }
+  
+  if (exercises.length === 0 && todaysPlan.trim().length > 0) {
+     return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
+  }
+
 
   return exercises;
 }
 
 
 export default function WorkoutPage() {
+  const { user, isLoading: isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid, 'userProfile', user.uid);
+  }, [user, firestore]);
+  
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+
   const [todaysExercises, setTodaysExercises] = useState<Exercise[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This code runs only on the client
-    const plan = sessionStorage.getItem('workoutPlan');
+    if (isUserLoading || isProfileLoading) return;
+    
+    const plan = userProfile?.weeklyWorkoutPlan;
     if (plan) {
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
       const parsedExercises = parseTodaysWorkout(plan, today);
-      
-      // Check if parsing returned exercises or if it's a designated rest day
-      if (parsedExercises.length > 0) {
-        setTodaysExercises(parsedExercises);
-      } else {
-        // This case handles when the plan exists but no exercises are found for today,
-        // which implies a rest day or parsing failure. We'll show the rest day card.
-        setTodaysExercises([{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }]);
-      }
+      setTodaysExercises(parsedExercises);
     } else {
-      // If no plan is in session storage, use the default workout
+      // If no plan is in firestore, use the default workout
       setTodaysExercises(defaultExercises);
     }
-    setIsLoading(false);
-  }, []);
+  }, [userProfile, isUserLoading, isProfileLoading]);
+
+  const isLoading = isUserLoading || isProfileLoading || todaysExercises === null;
+
 
   if (isLoading) {
     return (

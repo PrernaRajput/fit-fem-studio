@@ -26,27 +26,28 @@ const iconMap: { [key: string]: React.ReactNode } = {
 };
 
 function parseWorkoutPlan(plan: string) {
-  const dayOrder = ['Justification', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Dietary Guidelines'];
-  const planByDay: { [key: string]: string } = {};
+    const dayOrder = ['Justification', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Dietary Guidelines'];
+    const planByDay: { [key: string]: string } = {};
 
-  const regex = new RegExp(`(${dayOrder.join('|')}):`, 'g');
-  const parts = plan.split(regex);
-
-  let currentDay: string | null = null;
-  for (let i = 1; i < parts.length; i += 2) {
-    const day = parts[i];
-    const content = parts[i + 1]?.trim() || '';
-    if (dayOrder.includes(day)) {
-      planByDay[day] = content;
+    const regex = new RegExp(`(?:\\*\\*)?(${dayOrder.join('|')}):(?:\\*\\*)?`, 'g');
+    const parts = plan.split(regex);
+    
+    let currentDay: string | null = null;
+    for (let i = 1; i < parts.length; i += 2) {
+      const day = parts[i];
+      const content = parts[i + 1]?.trim() || '';
+      if (dayOrder.includes(day)) {
+          planByDay[day] = content;
+      }
     }
-  }
 
-  // Handle case where first part is intro/justification without a keyword
-  if (!Object.keys(planByDay).length && plan) {
-    const introKey = "Introduction";
-    dayOrder.unshift(introKey);
-    planByDay[introKey] = plan;
-  }
+    // Handle cases where the first part is justification but doesn't have the keyword due to LLM inconsistency
+    if (!planByDay['Justification'] && !plan.trim().startsWith('**Monday')) {
+        const firstSectionEnd = plan.indexOf('**Monday');
+        if (firstSectionEnd > 0) {
+            planByDay['Justification'] = plan.substring(0, firstSectionEnd).trim();
+        }
+    }
   
   return { planByDay, dayOrder };
 }
@@ -71,7 +72,7 @@ export function PersonalizedWorkoutPlan({ data }: PersonalizedWorkoutPlanProps) 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Accordion type="single" collapsible className="w-full" defaultValue="Monday">
+        <Accordion type="single" collapsible className="w-full" defaultValue="Justification">
           {dayOrder.map((day) => {
             const content = planByDay[day];
             if (!content) return null;

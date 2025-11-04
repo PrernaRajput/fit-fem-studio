@@ -60,10 +60,13 @@ export function SignupForm() {
       const user = userCredential.user;
 
       // Create a user profile document in Firestore
-      const userProfileRef = doc(firestore, 'users', user.uid);
+      const userProfileRef = doc(firestore, 'users', user.uid, 'userProfile', user.uid);
       await setDoc(userProfileRef, {
+        id: user.uid,
         email: user.email,
+        name: user.displayName || '',
         createdAt: new Date(),
+        weeklyWorkoutPlan: null,
       });
 
       toast({
