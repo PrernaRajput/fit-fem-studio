@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Flame, Apple, Droplets, Dumbbell } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DayProps } from 'react-day-picker';
 
 type DailyStats = {
   caloriesConsumed: number;
@@ -53,7 +54,7 @@ export function ProgressCalendar() {
     setDate(selectedDate);
   };
   
-  const DayWithDot = ({ date: dayDate, ...props }: { date: Date, displayMonth: Date }) => {
+  const DayWithDot = ({ date: dayDate, displayMonth, ...props }: DayProps) => {
     const dateKey = format(dayDate, 'yyyy-MM-dd');
     const hasData = mockData[dateKey];
     return (
