@@ -9,8 +9,8 @@ import { AlertCircle } from 'lucide-react';
 
 import type { GeneratePersonalizedWorkoutPlanOutput } from '@/ai/flows/personalized-workout-plan';
 import type { ZodIssue } from 'zod';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
 export function WorkoutGenerator() {
@@ -30,14 +30,9 @@ export function WorkoutGenerator() {
     setWorkoutPlan(plan);
     
     if (plan && plan.weeklyWorkoutPlan && user && firestore) {
-      // Save to Firestore
-      try {
-        const userProfileRef = doc(firestore, 'users', user.uid, 'userProfile', user.uid);
-        await setDoc(userProfileRef, { weeklyWorkoutPlan: plan.weeklyWorkoutPlan }, { merge: true });
-      } catch (e) {
-        console.error("Failed to save workout plan:", e);
-        setError("Could not save your workout plan. Please try again.");
-      }
+      // Save to Firestore using non-blocking update
+      const userProfileRef = doc(firestore, 'users', user.uid, 'userProfile', user.uid);
+      setDocumentNonBlocking(userProfileRef, { weeklyWorkoutPlan: plan.weeklyWorkoutPlan }, { merge: true });
 
       // Smooth scroll to results
       setTimeout(() => {

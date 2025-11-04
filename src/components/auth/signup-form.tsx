@@ -14,9 +14,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useDoc } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useState } from 'react';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
@@ -59,15 +59,16 @@ export function SignupForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Create a user profile document in Firestore
+      // Create a user profile document in Firestore using non-blocking update
       const userProfileRef = doc(firestore, 'users', user.uid, 'userProfile', user.uid);
-      await setDoc(userProfileRef, {
+      const profileData = {
         id: user.uid,
         email: user.email,
         name: user.displayName || '',
         createdAt: new Date(),
         weeklyWorkoutPlan: null,
-      });
+      };
+      setDocumentNonBlocking(userProfileRef, profileData, { merge: false });
 
       toast({
         title: 'Account Created!',
