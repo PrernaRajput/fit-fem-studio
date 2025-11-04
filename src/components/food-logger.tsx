@@ -120,6 +120,9 @@ export function FoodLogger() {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [scannedCode, setScannedCode] = useState<string | null>(null);
+    const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 
     const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + calculateItemCalories(item), 0);
     const remaining = calories.budget - consumedCalories + calories.burned;
@@ -127,15 +130,65 @@ export function FoodLogger() {
     const waterPercentage = (water.consumed / water.goal) * 100;
 
     useEffect(() => {
-        let stream: MediaStream;
+        let stream: MediaStream | undefined;
+    
+        const startScan = async (videoElement: HTMLVideoElement) => {
+            if (!('BarcodeDetector' in window)) {
+                console.error('Barcode Detector is not supported in this browser.');
+                toast({
+                    variant: 'destructive',
+                    title: 'Barcode Scanner Not Supported',
+                    description: 'Your browser does not support the barcode scanning feature.',
+                });
+                return;
+            }
+    
+            // @ts-ignore
+            const barcodeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e'] });
+    
+            scanningIntervalRef.current = setInterval(async () => {
+                try {
+                    const barcodes = await barcodeDetector.detect(videoElement);
+                    if (barcodes.length > 0) {
+                        const detectedCode = barcodes[0].rawValue;
+                        setScannedCode(detectedCode);
+                        // Stop scanning once a code is found
+                        if (scanningIntervalRef.current) {
+                            clearInterval(scanningIntervalRef.current);
+                        }
+                        // Vibrate for feedback
+                        if ('vibrate' in navigator) {
+                            navigator.vibrate(200);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Barcode detection failed:', error);
+                }
+            }, 500); // Scan every 500ms
+        };
+    
         const getCameraPermission = async () => {
-          if (!isScannerOpen) return;
+          if (!isScannerOpen) {
+            if (stream) {
+              stream.getTracks().forEach(track => track.stop());
+            }
+            if (scanningIntervalRef.current) {
+                clearInterval(scanningIntervalRef.current);
+            }
+            return;
+          }
+    
+          setHasCameraPermission(null);
+          setScannedCode(null);
+    
           try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             setHasCameraPermission(true);
     
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
+              videoRef.current.play(); // Ensure video is playing
+              await startScan(videoRef.current);
             }
           } catch (error) {
             console.error('Error accessing camera:', error);
@@ -150,10 +203,13 @@ export function FoodLogger() {
     
         getCameraPermission();
     
-        // Cleanup function to stop the camera stream when the dialog is closed
+        // Cleanup function
         return () => {
           if (stream) {
             stream.getTracks().forEach(track => track.stop());
+          }
+          if (scanningIntervalRef.current) {
+            clearInterval(scanningIntervalRef.current);
           }
         };
       }, [isScannerOpen, toast]);
@@ -429,6 +485,14 @@ export function FoodLogger() {
                                 <AlertTitle>Camera Access Required</AlertTitle>
                                 <AlertDescription>
                                     Please allow camera access to use this feature.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                         {scannedCode && (
+                            <Alert className="mt-4">
+                                <AlertTitle>Barcode Scanned!</AlertTitle>
+                                <AlertDescription>
+                                    Code: {scannedCode}
                                 </AlertDescription>
                             </Alert>
                         )}
