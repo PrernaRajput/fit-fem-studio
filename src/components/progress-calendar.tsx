@@ -54,17 +54,20 @@ export function ProgressCalendar() {
     setDate(selectedDate);
   };
   
-  const DayWithDot = (props: DayProps) => {
+  function DayWithDot(props: DayProps) {
     const { date, displayMonth } = props;
     const dateKey = format(date, 'yyyy-MM-dd');
-    const hasData = !!mockData[dateKey];
-  
+    const hasData = !!mockData[dateKey] && date < new Date();
+    
+    // Default Day component from react-day-picker
+    const Day = DayPicker.defaultProps.components?.Day ?? 'div';
+
     return (
-      <div className={cn('relative h-9 w-9 flex items-center justify-center')}>
+      <div className="relative">
+        <Day {...props} />
         {hasData && (
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
         )}
-        <DayPicker.Day {...props} />
       </div>
     );
   };
