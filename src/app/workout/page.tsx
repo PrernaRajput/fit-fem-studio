@@ -145,7 +145,13 @@ export default function WorkoutPage() {
   const [todaysExercises, setTodaysExercises] = useState<Exercise[] | null>(null);
 
   useEffect(() => {
-    if (isUserLoading || isProfileLoading) return;
+    // This effect runs whenever the profile data from Firestore changes.
+    if (isUserLoading || isProfileLoading) {
+      // Still loading, do nothing until data is ready.
+      // Setting state to null will keep the loading screen up.
+      setTodaysExercises(null);
+      return;
+    };
     
     const plan = userProfile?.weeklyWorkoutPlan;
     if (plan) {
@@ -158,7 +164,8 @@ export default function WorkoutPage() {
     }
   }, [userProfile, isUserLoading, isProfileLoading]);
 
-  const isLoading = isUserLoading || isProfileLoading || todaysExercises === null;
+  // Unified loading state
+  const isLoading = todaysExercises === null;
 
 
   if (isLoading) {
