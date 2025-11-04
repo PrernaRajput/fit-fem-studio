@@ -12,11 +12,14 @@ import type { ZodIssue } from 'zod';
 import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
+type WorkoutGeneratorProps = {
+  setWorkoutPlan: (plan: GeneratePersonalizedWorkoutPlanOutput | null) => void;
+};
 
-export function WorkoutGenerator() {
+
+export function WorkoutGenerator({ setWorkoutPlan }: WorkoutGeneratorProps) {
   const { user } = useUser();
   const firestore = useFirestore();
-  const [workoutPlan, setWorkoutPlan] = useState<GeneratePersonalizedWorkoutPlanOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +30,7 @@ export function WorkoutGenerator() {
       setError("Please check the form for errors.");
     }
     
+    // Update parent state
     setWorkoutPlan(plan);
     
     if (plan && plan.weeklyWorkoutPlan && user && firestore) {
@@ -42,21 +46,19 @@ export function WorkoutGenerator() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 md:py-16">
-      <div className="max-w-3xl mx-auto">
-        <WorkoutForm onFormSubmit={handleFormSubmit} setIsLoading={setIsLoading} isLoading={isLoading} />
-        
-        <div id="workout-plan-section" className="mt-12 min-h-[300px]">
-          {isLoading && <WorkoutPlanSkeleton />}
-          {error && !isLoading && (
-            <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 text-red-500">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Generation Failed</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {workoutPlan && !isLoading && <PersonalizedWorkoutPlan data={workoutPlan} />}
-        </div>
+    <div className="max-w-3xl mx-auto">
+      <WorkoutForm onFormSubmit={handleFormSubmit} setIsLoading={setIsLoading} isLoading={isLoading} />
+      
+      <div id="workout-plan-section" className="mt-12">
+        {isLoading && <WorkoutPlanSkeleton />}
+        {error && !isLoading && (
+          <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 text-red-500">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Generation Failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {/* The plan is now displayed by the parent component */}
       </div>
     </div>
   );

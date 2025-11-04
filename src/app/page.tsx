@@ -7,28 +7,31 @@ import { doc } from 'firebase/firestore';
 import { PersonalizedWorkoutPlan } from '@/components/personalized-workout-plan';
 import { WorkoutPlanSkeleton } from '@/components/workout-plan-skeleton';
 import { useEffect, useState } from 'react';
+import { GeneratePersonalizedWorkoutPlanOutput } from '@/ai/flows/personalized-workout-plan';
 
 export default function Home() {
   const { user, isLoading: isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [shouldRenderGenerator, setShouldRenderGenerator] = useState(false);
+  
+  // Local state to hold the workout plan, allowing for immediate updates
+  const [workoutPlan, setWorkoutPlan] = useState<GeneratePersonalizedWorkoutPlanOutput | null>(null);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // The document ID is the user's UID, not a sub-document.
     return doc(firestore, 'users', user.uid, 'userProfile', user.uid);
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
+  // Effect to sync Firestore data to local state
   useEffect(() => {
-    // If the user has a plan, we don't immediately show the generator.
-    // A state change in the generator component will reveal it if needed.
-    if (user && !isUserLoading && !isProfileLoading) {
-        if (!userProfile?.weeklyWorkoutPlan) {
-            setShouldRenderGenerator(true);
-        }
+    if (userProfile?.weeklyWorkoutPlan) {
+      setWorkoutPlan({ weeklyWorkoutPlan: userProfile.weeklyWorkoutPlan });
+    } else {
+      setWorkoutPlan(null); // Clear local state if no plan in Firestore
     }
-  }, [user, isUserLoading, isProfileLoading, userProfile]);
+  }, [userProfile]);
 
   const isLoading = isUserLoading || (user && isProfileLoading);
   
@@ -36,17 +39,19 @@ export default function Home() {
     <div className="flex flex-col min-h-dvh">
       <main className="flex-1">
         <Hero />
-        { isLoading && (
-            <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
-                <WorkoutPlanSkeleton />
-            </div>
-        )}
-        { user && !isLoading && userProfile && userProfile.weeklyWorkoutPlan && (
-             <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
-                <PersonalizedWorkoutPlan data={{ weeklyWorkoutPlan: userProfile.weeklyWorkoutPlan }} />
-             </div>
-        )}
-        { (shouldRenderGenerator || (user && !isLoading && !userProfile?.weeklyWorkoutPlan)) && <WorkoutGenerator /> }
+        <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
+          {/* Always render the generator if the user is logged in */}
+          {user && !isUserLoading && <WorkoutGenerator setWorkoutPlan={setWorkoutPlan} />}
+
+          {/* Spacer */}
+          <div className="mt-12 min-h-[300px]">
+            {/* Show skeleton while loading user and profile data */}
+            { isLoading && <WorkoutPlanSkeleton /> }
+            
+            {/* Show the plan if it exists in local state */}
+            { user && !isLoading && workoutPlan && <PersonalizedWorkoutPlan data={workoutPlan} />}
+          </div>
+        </div>
       </main>
       <Footer />
     </div>
