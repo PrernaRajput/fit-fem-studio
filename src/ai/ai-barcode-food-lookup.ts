@@ -8,7 +8,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import {
   AnalyzeFoodOutputSchema,
   type AnalyzeFoodOutput,
@@ -20,14 +19,14 @@ const lookupFoodPrompt = ai.definePrompt({
     name: 'lookupFoodPrompt',
     input: { schema: LookupFoodByBarcodeInputSchema },
     output: { schema: AnalyzeFoodOutputSchema },
-    prompt: `You are a nutrition database expert. A user has scanned a barcode. Look up the food item associated with the following UPC/EAN barcode and provide its nutritional information.
-    
+    prompt: `You are an expert nutrition database API. Your task is to use a global UPC/EAN barcode database (like Open Food Facts or a similar comprehensive source) to find the exact product and its nutritional information.
+
     Barcode: {{{barcode}}}
     
-    1.  Identify the product from the barcode.
-    2.  Provide your best estimate for the calories, protein, carbohydrates, and fat for a standard serving size (e.g., 100g or a typical serving).
-    3.  Return a list of common 'measurements' for this food. This list MUST include a base unit of "g" or "ml". It should also include a "serving" unit.
-        - For each measurement, provide the 'unit' name (e.g., "serving", "g") and its 'quantity' relative to the base unit.
+    1.  **Query Database**: Look up the food item associated with the provided barcode.
+    2.  **Identify Product**: Return the precise product name as listed in the database.
+    3.  **Provide Nutrition**: Extract the nutritional information for a standard serving size (as defined on the product's label, or 100g if not available). This includes calories, protein, carbohydrates, and fat.
+    4.  **List Measurements**: Return a list of common 'measurements'. This MUST include a base unit of "g" or "ml" with quantity 1. It must also include a "serving" unit that corresponds to the nutritional data provided.
     
     Example for barcode '016000275287' (Cheerios):
     - foodName: "Cheerios Cereal"
