@@ -46,10 +46,10 @@ export function WorkoutGenerator({ setWorkoutPlan }: WorkoutGeneratorProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto" id="workout-plan-section">
       <WorkoutForm onFormSubmit={handleFormSubmit} setIsLoading={setIsLoading} isLoading={isLoading} />
       
-      <div id="workout-plan-section" className="mt-12">
+      <div className="mt-12">
         {isLoading && <WorkoutPlanSkeleton />}
         {error && !isLoading && (
           <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 text-red-500">

@@ -38,7 +38,7 @@ export default function Home() {
         <Hero />
         <div className="container mx-auto px-4 py-12 md:py-16 max-w-3xl">
           {user && !isUserLoading && <WorkoutGenerator setWorkoutPlan={setWorkoutPlan} />}
-          <div className="mt-12 min-h-[300px]" id="workout-plan-section">
+          <div className="mt-12 min-h-[300px]">
             { isLoading && <WorkoutPlanSkeleton /> }
             { user && !isLoading && workoutPlan && <PersonalizedWorkoutPlan data={workoutPlan} />}
           </div>
