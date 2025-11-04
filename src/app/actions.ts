@@ -8,8 +8,12 @@ import {
 import {
   analyzeFood,
 } from '@/ai/ai-food-logger';
+import {
+  lookupFoodByBarcode,
+} from '@/ai/ai-barcode-food-lookup';
+
 import { z } from 'zod';
-import { AnalyzeFoodInputSchema, type AnalyzeFoodInput, type AnalyzeFoodOutput } from '@/lib/types';
+import { AnalyzeFoodInputSchema, type AnalyzeFoodInput, type AnalyzeFoodOutput, LookupFoodByBarcodeInputSchema } from '@/lib/types';
 
 
 const workoutPlanSchema = z.object({
@@ -57,5 +61,22 @@ export async function getFoodAnalysis(
   } catch (e) {
     console.error(e);
     return { success: false, data: null, error: 'An unexpected error occurred while analyzing the food. Please try again.' };
+  }
+}
+
+export async function getFoodFromBarcode(
+  barcode: string
+): Promise<{ success: boolean; data: AnalyzeFoodOutput | null; error: string | null }> {
+  const validation = LookupFoodByBarcodeInputSchema.safeParse({ barcode });
+  if (!validation.success) {
+    return { success: false, data: null, error: 'Invalid barcode format.' };
+  }
+
+  try {
+    const foodData = await lookupFoodByBarcode(validation.data);
+    return { success: true, data: foodData, error: null };
+  } catch (e) {
+    console.error(e);
+    return { success: false, data: null, error: 'An unexpected error occurred while looking up the barcode. Please try again.' };
   }
 }

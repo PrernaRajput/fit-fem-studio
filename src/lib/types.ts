@@ -21,3 +21,8 @@ export const AnalyzeFoodOutputSchema = z.object({
   measurements: z.array(MeasurementSchema).describe('A list of common measurements for this food item, including a base unit like "g" or "ml".'),
 });
 export type AnalyzeFoodOutput = z.infer<typeof AnalyzeFoodOutputSchema>;
+
+export const LookupFoodByBarcodeInputSchema = z.object({
+  barcode: z.string().describe('The UPC or EAN barcode of the food product.'),
+});
+export type LookupFoodByBarcodeInput = z.infer<typeof LookupFoodByBarcodeInputSchema>;

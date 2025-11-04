@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { getFoodAnalysis } from '@/app/actions';
+import { getFoodAnalysis, getFoodFromBarcode } from '@/app/actions';
 import {
   Card,
   CardContent,
@@ -115,12 +115,17 @@ export function FoodLogger() {
     const [isSearching, setIsSearching] = useState(false);
     const [searchResult, setSearchResult] = useState<AnalyzeFoodOutput | null>(null);
     const [activeCategory, setActiveCategory] = useState<keyof MealLog | null>(null);
+    
+    // State for the new scanned item dialog
+    const [isScannedItemLogOpen, setIsScannedItemLogOpen] = useState(false);
+    const [scannedFoodResult, setScannedFoodResult] = useState<AnalyzeFoodOutput | null>(null);
+    const [scannedItemCategory, setScannedItemCategory] = useState<keyof MealLog>('Snacks');
+
 
     // State for barcode scanner
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const [scannedCode, setScannedCode] = useState<string | null>(null);
     const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
@@ -128,6 +133,26 @@ export function FoodLogger() {
     const remaining = calories.budget - consumedCalories + calories.burned;
     const consumedPercentage = (consumedCalories / calories.budget) * 100;
     const waterPercentage = (water.consumed / water.goal) * 100;
+
+    const handleBarcodeScanned = async (barcode: string) => {
+        setIsScannerOpen(false); // Close the scanner
+        setIsSearching(true); // Show a loading indicator
+        toast({ title: 'Barcode Scanned!', description: `Looking up ${barcode}...` });
+    
+        const result = await getFoodFromBarcode(barcode);
+        setIsSearching(false);
+    
+        if (result.success && result.data) {
+          setScannedFoodResult(result.data);
+          setIsScannedItemLogOpen(true); // Open the new dialog with the food data
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Lookup Failed',
+            description: result.error || 'Could not find a food item for this barcode.',
+          });
+        }
+    };
 
     useEffect(() => {
         let stream: MediaStream | undefined;
@@ -151,15 +176,13 @@ export function FoodLogger() {
                     const barcodes = await barcodeDetector.detect(videoElement);
                     if (barcodes.length > 0) {
                         const detectedCode = barcodes[0].rawValue;
-                        setScannedCode(detectedCode);
-                        // Stop scanning once a code is found
                         if (scanningIntervalRef.current) {
                             clearInterval(scanningIntervalRef.current);
                         }
-                        // Vibrate for feedback
                         if ('vibrate' in navigator) {
                             navigator.vibrate(200);
                         }
+                        handleBarcodeScanned(detectedCode);
                     }
                 } catch (error) {
                     console.error('Barcode detection failed:', error);
@@ -179,7 +202,6 @@ export function FoodLogger() {
           }
     
           setHasCameraPermission(null);
-          setScannedCode(null);
     
           try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -258,30 +280,49 @@ export function FoodLogger() {
         setIsSearching(false);
     };
     
-    const addFoodItemToLog = () => {
+    const addFoodItemToLog = (foodData: AnalyzeFoodOutput, category: keyof MealLog) => {
+        // Favor 'serving' if available, otherwise fall back to other units.
+        const servingMeasurement = foodData.measurements.find(m => m.unit.toLowerCase() === 'serving') 
+                                   || foodData.measurements.find(m => m.unit !== 'g' && m.unit !== 'ml')
+                                   || foodData.measurements[0];
+
+        const baseTotal = servingMeasurement.quantity;
+        if (!baseTotal) {
+            console.error("Base total quantity is zero, cannot add item.");
+            toast({ variant: 'destructive', title: 'Invalid Food Data' });
+            return;
+        }
+
+        const newFoodItem: LoggedFoodItem = {
+            id: `${new Date().getTime()}-${foodData.foodName}`,
+            name: foodData.foodName,
+            baseCalories: foodData.calories / baseTotal,
+            baseProtein: foodData.protein / baseTotal,
+            baseCarbs: foodData.carbohydrates / baseTotal,
+            baseFat: foodData.fat / baseTotal,
+            quantity: 1,
+            selectedUnit: servingMeasurement.unit,
+            measurements: foodData.measurements,
+        };
+
+        setMealLog(prev => ({
+            ...prev,
+            [category]: [...prev[category], newFoodItem],
+        }));
+    };
+
+    const handleAddFromSearch = () => {
         if (searchResult && activeCategory) {
-            const baseMeasurement = searchResult.measurements.find(m => m.unit === 'g' || m.unit === 'ml') || searchResult.measurements[0];
-            const queryMeasurement = searchResult.measurements.find(m => m.unit !== 'g' && m.unit !== 'ml') || baseMeasurement;
-
-            const baseTotal = queryMeasurement.quantity;
-
-            const newFoodItem: LoggedFoodItem = {
-                id: `${new Date().getTime()}-${searchResult.foodName}`,
-                name: searchResult.foodName,
-                baseCalories: searchResult.calories / baseTotal,
-                baseProtein: searchResult.protein / baseTotal,
-                baseCarbs: searchResult.carbohydrates / baseTotal,
-                baseFat: searchResult.fat / baseTotal,
-                quantity: 1,
-                selectedUnit: queryMeasurement.unit,
-                measurements: searchResult.measurements,
-            };
-
-            setMealLog(prev => ({
-                ...prev,
-                [activeCategory]: [...prev[activeCategory], newFoodItem],
-            }));
+            addFoodItemToLog(searchResult, activeCategory);
             setIsFoodLogOpen(false);
+        }
+    };
+
+    const handleAddFromScan = () => {
+        if (scannedFoodResult) {
+            addFoodItemToLog(scannedFoodResult, scannedItemCategory);
+            setIsScannedItemLogOpen(false);
+            setScannedFoodResult(null);
         }
     };
 
@@ -420,7 +461,8 @@ export function FoodLogger() {
             </div>
           </div>
 
-          <Dialog open={isFoodLogOpen} onOpenChange={setIsFoodLogOpen}>
+            {/* Food Search Dialog */}
+            <Dialog open={isFoodLogOpen} onOpenChange={setIsFoodLogOpen}>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Log Food for {activeCategory}</DialogTitle>
@@ -460,7 +502,7 @@ export function FoodLogger() {
                                     <p><strong>Fat:</strong> {searchResult.fat}g</p>
                                 </CardContent>
                             </Card>
-                            <Button className="w-full" onClick={addFoodItemToLog}>
+                            <Button className="w-full" onClick={handleAddFromSearch}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add to {activeCategory}
                             </Button>
                         </div>
@@ -468,6 +510,8 @@ export function FoodLogger() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Barcode Scanner Dialog */}
             <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
                 <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
@@ -488,16 +532,50 @@ export function FoodLogger() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                         {scannedCode && (
-                            <Alert className="mt-4">
-                                <AlertTitle>Barcode Scanned!</AlertTitle>
-                                <AlertDescription>
-                                    Code: {scannedCode}
-                                </AlertDescription>
-                            </Alert>
-                        )}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/2 border-2 border-red-500/80 rounded-lg" />
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Scanned Item Log Dialog */}
+            <Dialog open={isScannedItemLogOpen} onOpenChange={setIsScannedItemLogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Log Scanned Item</DialogTitle>
+                    </DialogHeader>
+                    {scannedFoodResult ? (
+                        <div className="space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className='capitalize'>{scannedFoodResult.foodName}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <p><strong>Calories:</strong> {scannedFoodResult.calories} kcal</p>
+                                    <p><strong>Protein:</strong> {scannedFoodResult.protein}g</p>
+                                    <p><strong>Carbs:</strong> {scannedFoodResult.carbohydrates}g</p>
+                                    <p><strong>Fat:</strong> {scannedFoodResult.fat}g</p>
+                                </CardContent>
+                            </Card>
+                            <div className="space-y-2">
+                                <Label>Log to Meal</Label>
+                                <Select value={scannedItemCategory} onValueChange={(v: keyof MealLog) => setScannedItemCategory(v)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select meal" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {foodCategories.map(cat => (
+                                            <SelectItem key={cat.key} value={cat.key}>{cat.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button className="w-full" onClick={handleAddFromScan}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Log Item
+                            </Button>
+                        </div>
+                    ) : (
+                        <p>No item data to display.</p>
+                    )}
                 </DialogContent>
             </Dialog>
 
