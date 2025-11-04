@@ -50,6 +50,9 @@ import { AnalyzeFoodOutput, Measurement } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useUser, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc, serverTimestamp, increment } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 
 type LoggedFoodItem = {
@@ -91,17 +94,20 @@ const calculateItemCalories = (item: LoggedFoodItem) => {
 
 export function FoodLogger() {
     const { toast } = useToast();
+    const { user } = useUser();
+    const firestore = useFirestore();
+
     const [mealLog, setMealLog] = useState<MealLog>({ Breakfast: [], Lunch: [], Dinner: [], Snacks: [] });
     const [calories, setCalories] = useState({
         budget: 2000,
-        burned: 300,
+        burned: 0,
     });
-    const [water, setWater] = useState({ consumed: 4, goal: 8 });
+    const [water, setWater] = useState({ consumed: 0, goal: 8 });
     const [tempWaterGoal, setTempWaterGoal] = useState(8);
     const [userProfile, setUserProfile] = useState<RecommendCaloriesInput>({
         goal: 'weight loss',
-        dailyCaloriesBurned: 300,
-        dailyCaloriesIntake: 1200,
+        dailyCaloriesBurned: 0,
+        dailyCaloriesIntake: 0,
         weightInKilograms: 70,
         heightInCentimeters: 170,
         ageInYears: 30,
@@ -131,11 +137,32 @@ export function FoodLogger() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    const todayString = format(new Date(), 'yyyy-MM-dd');
+    const dailyBudgetRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid, 'calorieBudgets', todayString);
+    }, [user, firestore, todayString]);
+
+    const { data: dailyBudgetData } = useDoc(dailyBudgetRef);
 
     const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + calculateItemCalories(item), 0);
-    const remaining = calories.budget - consumedCalories + calories.burned;
+    const remaining = calories.budget - consumedCalories + (dailyBudgetData?.caloriesBurned || 0);
     const consumedPercentage = (consumedCalories / calories.budget) * 100;
     const waterPercentage = (water.consumed / water.goal) * 100;
+
+    useEffect(() => {
+        if(dailyBudgetData) {
+            setWater(prev => ({ ...prev, consumed: dailyBudgetData.waterIntake || 0 }));
+            setCalories(prev => ({ ...prev, budget: dailyBudgetData.recommendedCalories || 2000, burned: dailyBudgetData.caloriesBurned || 0 }));
+        }
+    }, [dailyBudgetData]);
+
+    useEffect(() => {
+        const totalConsumed = Object.values(mealLog).flat().reduce((acc, item) => acc + calculateItemCalories(item), 0);
+        if (dailyBudgetRef) {
+            setDocumentNonBlocking(dailyBudgetRef, { caloriesConsumed: totalConsumed }, { merge: true });
+        }
+    }, [mealLog, dailyBudgetRef]);
 
     const handleBarcodeScanned = async (barcode: string) => {
         setIsScannerOpen(false); // Close the scanner
@@ -274,7 +301,11 @@ export function FoodLogger() {
       }, [isScannerOpen, scannerMode, toast]);
 
     const handleWaterChange = (amount: number) => {
-        setWater(prev => ({ ...prev, consumed: Math.max(0, prev.consumed + amount) }));
+        const newConsumed = Math.max(0, water.consumed + amount);
+        setWater(prev => ({ ...prev, consumed: newConsumed }));
+        if (dailyBudgetRef) {
+            setDocumentNonBlocking(dailyBudgetRef, { waterIntake: newConsumed }, { merge: true });
+        }
     };
 
     const handleProfileChange = (key: keyof RecommendCaloriesInput, value: any) => {
@@ -283,7 +314,16 @@ export function FoodLogger() {
 
     const handleGoalUpdate = async () => {
         const result = await recommendCalories(userProfile);
-        setCalories(prev => ({ ...prev, budget: result.recommendedDailyCalorieIntake }));
+        const newBudget = result.recommendedDailyCalorieIntake;
+        setCalories(prev => ({ ...prev, budget: newBudget }));
+        if (dailyBudgetRef && user) {
+            setDocumentNonBlocking(dailyBudgetRef, { 
+                id: todayString,
+                date: todayString,
+                userProfileId: user.uid,
+                recommendedCalories: newBudget 
+            }, { merge: true });
+        }
         setIsGoalDialogOpen(false);
     }
     
@@ -487,7 +527,7 @@ export function FoodLogger() {
               <p className="text-sm text-muted-foreground">Burned</p>
               <p className="text-2xl font-bold flex items-center justify-center gap-1">
                 <Flame className="w-5 h-5 text-accent" />
-                {calories.burned}
+                {dailyBudgetData?.caloriesBurned || 0}
               </p>
             </div>
           </div>
@@ -761,3 +801,5 @@ export function FoodLogger() {
     </div>
   );
 }
+
+    

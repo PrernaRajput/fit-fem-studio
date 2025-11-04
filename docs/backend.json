@@ -271,8 +271,8 @@
         },
         "date": {
           "type": "string",
-          "description": "Date for which the calorie budget is defined.",
-          "format": "date-time"
+          "description": "Date for which the calorie budget is defined, in 'yyyy-MM-dd' format.",
+          "format": "date"
         },
         "recommendedCalories": {
           "type": "number",
@@ -289,6 +289,14 @@
         "goalDeficit": {
           "type": "number",
           "description": "Target calorie deficit for the user to achieve their goal."
+        },
+        "waterIntake": {
+          "type": "number",
+          "description": "Number of glasses of water consumed by the user on the specific date."
+        },
+        "workoutsDone": {
+          "type": "number",
+          "description": "Number of workouts completed by the user on the specific date."
         }
       },
       "required": [
@@ -388,21 +396,21 @@
         }
       },
       {
-        "path": "/users/{userId}/calorieBudgets/{calorieBudgetId}",
+        "path": "/users/{userId}/calorieBudgets/{date}",
         "definition": {
           "entityName": "CalorieBudget",
           "schema": {
             "$ref": "#/backend/entities/CalorieBudget"
           },
-          "description": "Stores calorie budgets for a specific user. Path-based ownership.",
+          "description": "Stores calorie budgets for a specific user, keyed by date. Path-based ownership.",
           "params": [
             {
               "name": "userId",
               "description": "The unique identifier for the user."
             },
             {
-              "name": "calorieBudgetId",
-              "description": "The unique identifier for the calorie budget."
+              "name": "date",
+              "description": "The date of the budget in 'yyyy-MM-dd' format."
             }
           ]
         }
@@ -456,6 +464,7 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support the QAPs (Rules Are Not Filters), and maintain data clarity for the FitFemAI application. User-owned data is stored under the `/users/{userId}` path, which will improve security rules simplicity and efficiency. Denormalization is applied where needed to avoid hierarchical authorization dependencies.\n\n1.  **User Profiles:** User profiles are stored in `/users/{userId}/userProfile`. This adheres to the Path-Based ownership model, ensuring that only the authenticated user can access their own profile. A single user profile per user is enforced.\n\n2.  **Workout Plans:** Workout plans are stored in `/users/{userId}/workoutPlans/{workoutPlanId}`. This follows the Hierarchical Paths for User-Owned Data strategy. Each workout plan belongs to a specific user, simplifying security rules and making ownership explicit.\n\n3.  **Routines:** Routines are stored in `/users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}`. This continues the hierarchical path structure for nested data. This structure makes querying routines for a specific workout plan efficient.\n\n4.  **Food Log Entries:** Food log entries are stored in `/users/{userId}/foodLogEntries/{foodLogEntryId}`. This adheres to the path-based ownership model.\n\n5.  **Calorie Budgets:** Calorie budgets are stored in `/users/{userId}/calorieBudgets/{calorieBudgetId}`. This adheres to the path-based ownership model. Since a 1:1 relationship is intended, consider enforcing a single document per date or using the date as the document ID within this structure.\n\n6.  **Exercises & Food Items:** Exercises and food items are stored in globally accessible collections (`/exercises`, `/foodItems`). Since these are generic and reusable, a global collection is appropriate. Security rules will need to prevent unauthorized creation/modification of these items. Consider an admin role using DBAC (roles_admin collection) for managing these collections.\n\n**Authorization Independence:** This structure achieves authorization independence by avoiding `get()` calls in security rules. Access control is primarily based on the user ID extracted from `request.auth.uid` and the path. For example, to access a workout plan, the rule simply checks if `request.auth.uid == userId` from the path. This avoids hierarchical authorization dependencies and enables atomic operations.\n\n**QAPs (Rules Are Not Filters):** The structure supports secure `list` operations because of the segregation of user-specific data under the `/users/{userId}` path. Listing workout plans, food log entries, or calorie budgets for a user is secure because the rules can easily filter based on the `userId` in the path. Global collections require additional checks in rules to ensure only authorized users create or modify the content."
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support the QAPs (Rules Are Not Filters), and maintain data clarity for the FitFemAI application. User-owned data is stored under the `/users/{userId}` path, which will improve security rules simplicity and efficiency. Denormalization is applied where needed to avoid hierarchical authorization dependencies.\n\n1.  **User Profiles:** User profiles are stored in `/users/{userId}/userProfile`. This adheres to the Path-Based ownership model, ensuring that only the authenticated user can access their own profile. A single user profile per user is enforced.\n\n2.  **Workout Plans:** Workout plans are stored in `/users/{userId}/workoutPlans/{workoutPlanId}`. This follows the Hierarchical Paths for User-Owned Data strategy. Each workout plan belongs to a specific user, simplifying security rules and making ownership explicit.\n\n3.  **Routines:** Routines are stored in `/users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}`. This continues the hierarchical path structure for nested data. This structure makes querying routines for a specific workout plan efficient.\n\n4.  **Food Log Entries:** Food log entries are stored in `/users/{userId}/foodLogEntries/{foodLogEntryId}`. This adheres to the path-based ownership model.\n\n5.  **Calorie Budgets:** Calorie budgets are now stored in `/users/{userId}/calorieBudgets/{date}` where `date` is `yyyy-MM-dd`. This adheres to the path-based ownership model and makes it easy to look up a budget for a specific day.\n\n6.  **Exercises & Food Items:** Exercises and food items are stored in globally accessible collections (`/exercises`, `/foodItems`). Since these are generic and reusable, a global collection is appropriate. Security rules will need to prevent unauthorized creation/modification of these items. Consider an admin role using DBAC (roles_admin collection) for managing these collections.\n\n**Authorization Independence:** This structure achieves authorization independence by avoiding `get()` calls in security rules. Access control is primarily based on the user ID extracted from `request.auth.uid` and the path. For example, to access a workout plan, the rule simply checks if `request.auth.uid == userId` from the path. This avoids hierarchical authorization dependencies and enables atomic operations.\n\n**QAPs (Rules Are Not Filters):** The structure supports secure `list` operations because of the segregation of user-specific data under the `/users/{userId}` path. Listing workout plans, food log entries, or calorie budgets for a user is secure because the rules can easily filter based on the `userId` in the path. Global collections require additional checks in rules to ensure only authorized users create or modify the content."
   }
 }
+    

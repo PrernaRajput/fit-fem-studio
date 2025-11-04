@@ -11,54 +11,46 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Flame, Apple, Droplets, Dumbbell } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, DocumentData } from 'firebase/firestore';
+import { WithId } from '@/firebase/firestore/use-collection';
 
 type DailyStats = {
-  caloriesConsumed: number;
-  caloriesBurned: number;
-  waterIntake: number;
-  workoutsDone: number;
-};
-
-// Mock data for demonstration purposes
-const mockData: { [key: string]: DailyStats } = {
-  [format(new Date(), 'yyyy-MM-dd')]: {
-    caloriesConsumed: 1200,
-    caloriesBurned: 300,
-    waterIntake: 8,
-    workoutsDone: 1,
-  },
-  [format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')]: {
-    caloriesConsumed: 1800,
-    caloriesBurned: 500,
-    waterIntake: 6,
-    workoutsDone: 1,
-  },
-  [format(new Date(Date.now() - 2 * 86400000), 'yyyy-MM-dd')]: {
-    caloriesConsumed: 1500,
-    caloriesBurned: 250,
-    waterIntake: 7,
-    workoutsDone: 0,
-  },
+  date: string; // yyyy-MM-dd
+  caloriesConsumed?: number;
+  caloriesBurned?: number;
+  waterIntake?: number;
+  workoutsDone?: number;
 };
 
 export function ProgressCalendar() {
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [date, setDate] = useState<Date | undefined>(new Date());
 
+  const dailyStatsCollectionRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return collection(firestore, 'users', user.uid, 'calorieBudgets');
+  }, [user, firestore]);
+
+  const { data: dailyStatsData, isLoading } = useCollection<DailyStats>(dailyStatsCollectionRef);
+
+  const dailyStatsMap = useMemo(() => {
+    if (!dailyStatsData) return new Map<string, WithId<DailyStats>>();
+    return new Map(dailyStatsData.map(stat => [stat.date, stat]));
+  }, [dailyStatsData]);
+
   const selectedDayStats: DailyStats | null = date
-    ? mockData[format(date, 'yyyy-MM-dd')] || null
+    ? dailyStatsMap.get(format(date, 'yyyy-MM-dd')) || null
     : null;
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    // Only update if the selected date has changed
-    if (selectedDate && (!date || !isSameDay(selectedDate, date))) {
-        setDate(selectedDate);
-    }
+    setDate(selectedDate);
   };
   
-  // Memoize the dates that have data to avoid recalculating on every render
   const daysWithData = useMemo(() => {
-    return Object.keys(mockData).map(dateStr => new Date(dateStr.replace(/-/g, '/')));
-  }, []);
+    return Array.from(dailyStatsMap.keys()).map(dateStr => new Date(dateStr.replace(/-/g, '/')));
+  }, [dailyStatsMap]);
 
 
   return (
@@ -115,36 +107,36 @@ export function ProgressCalendar() {
                     <Apple className="h-5 w-5 text-green-400" />
                     <span>Calories Consumed</span>
                   </div>
-                  <span className="font-bold">{selectedDayStats.caloriesConsumed} kcal</span>
+                  <span className="font-bold">{selectedDayStats.caloriesConsumed || 0} kcal</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Flame className="h-5 w-5 text-accent" />
                     <span>Calories Burned</span>
                   </div>
-                  <span className="font-bold">{selectedDayStats.caloriesBurned} kcal</span>
+                  <span className="font-bold">{selectedDayStats.caloriesBurned || 0} kcal</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Droplets className="h-5 w-5 text-blue-400" />
                     <span>Water Intake</span>
                   </div>
-                  <span className="font-bold">{selectedDayStats.waterIntake} glasses</span>
+                  <span className="font-bold">{selectedDayStats.waterIntake || 0} glasses</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Dumbbell className="h-5 w-5 text-primary" />
                     <span>Workouts</span>
                   </div>
-                  <span className="font-bold">{selectedDayStats.workoutsDone}</span>
+                  <span className="font-bold">{selectedDayStats.workoutsDone || 0}</span>
                 </div>
               </div>
             ) : (
               <div
-                className="flex items-center justify-center text-muted-foreground bg-muted/30 rounded-lg p-8"
-                style={{ height: '300px' }}
+                className="flex items-center justify-center h-full text-muted-foreground bg-muted/30 rounded-lg p-8"
+                style={{ minHeight: '268px' }}
               >
-                <p>No data for this day.</p>
+                <p>{isLoading ? 'Loading stats...' : 'No data for this day.'}</p>
               </div>
             )}
           </div>
@@ -153,3 +145,5 @@ export function ProgressCalendar() {
     </div>
   );
 }
+
+    

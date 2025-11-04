@@ -28,6 +28,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { useUser, useFirestore, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc, increment } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 type Exercise = {
   name: string;
@@ -43,6 +46,9 @@ type WorkoutRoutineProps = {
 };
 
 export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -53,6 +59,22 @@ export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
   const [timeLeft, setTimeLeft] = useState(initialExercises[0]?.duration ?? 0);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const handleWorkoutCompletion = () => {
+    setWorkoutFinished(true);
+    speak('Workout complete! Well done.');
+
+    if (user && firestore) {
+      const todayString = format(new Date(), 'yyyy-MM-dd');
+      const dailyBudgetRef = doc(firestore, 'users', user.uid, 'calorieBudgets', todayString);
+      const totalCalories = routine.reduce((acc, curr) => acc + curr.calories, 0);
+
+      setDocumentNonBlocking(dailyBudgetRef, {
+        caloriesBurned: increment(totalCalories),
+        workoutsDone: increment(1)
+      }, { merge: true });
+    }
+  };
 
   useEffect(() => {
     if (isPaused || workoutFinished) return;
@@ -65,8 +87,7 @@ export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
             setTimeLeft(routine[currentExerciseIndex + 1].duration);
             speak(`Next exercise: ${routine[currentExerciseIndex + 1].name}`);
           } else {
-            setWorkoutFinished(true);
-            speak('Workout complete! Well done.');
+            handleWorkoutCompletion();
           }
           return 0;
         }
@@ -99,7 +120,7 @@ export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setTimeLeft(routine[currentExerciseIndex + 1].duration);
     } else {
-      setWorkoutFinished(true);
+      handleWorkoutCompletion();
     }
   };
 
@@ -284,3 +305,5 @@ export function WorkoutRoutine({ initialExercises }: WorkoutRoutineProps) {
     </div>
   );
 }
+
+    
