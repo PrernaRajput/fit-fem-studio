@@ -1,40 +1,461 @@
 {
-    "entities": {
-        "UserProfile": {
-            "title": "User Profile",
-            "description": "Represents a user's profile information.",
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "format": "email",
-                    "description": "The user's email address."
-                },
-                "phoneNumber": {
-                    "type": "string",
-                    "description": "The user's phone number."
-                },
-                "createdAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "The timestamp when the user profile was created."
-                }
-            },
-            "required": ["email"]
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile in the FitFemAI application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "age": {
+          "type": "number",
+          "description": "User's age in years.",
+          "format": "number"
+        },
+        "weight": {
+          "type": "number",
+          "description": "User's weight in kilograms.",
+          "format": "number"
+        },
+        "height": {
+          "type": "number",
+          "description": "User's height in centimeters.",
+          "format": "number"
+        },
+        "fitnessLevel": {
+          "type": "string",
+          "description": "User's self-assessed fitness level (e.g., beginner, intermediate, advanced)."
+        },
+        "goal": {
+          "type": "string",
+          "description": "User's primary fitness goal (e.g., weight loss, tone, maintain, muscle gain)."
+        },
+        "dietaryPreferences": {
+          "type": "string",
+          "description": "User's dietary preferences (e.g., vegetarian, vegan, gluten-free)."
         }
+      },
+      "required": [
+        "id",
+        "email",
+        "name",
+        "age",
+        "weight",
+        "height",
+        "fitnessLevel",
+        "goal"
+      ]
     },
-    "auth": {
-        "providers": [
-            "email",
-            "phone"
-        ]
-    },
-    "firestore": {
-        "/users/{userId}": {
-            "schema": {
-                "$ref": "#/entities/UserProfile"
-            },
-            "description": "Stores public profile information for each user."
+    "WorkoutPlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WorkoutPlan",
+      "type": "object",
+      "description": "Represents a workout plan generated for a specific user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the WorkoutPlan entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N WorkoutPlan)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the workout plan.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the workout plan.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Details and notes about the workout plan."
         }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "startDate",
+        "endDate"
+      ]
+    },
+    "Exercise": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Exercise",
+      "type": "object",
+      "description": "Represents an individual exercise within a workout routine.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Exercise entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the exercise (e.g., Squats, Push-ups)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of how to perform the exercise."
+        },
+        "equipment": {
+          "type": "string",
+          "description": "Equipment required for the exercise (e.g., dumbbells, resistance band)."
+        },
+        "metValue": {
+          "type": "number",
+          "description": "Metabolic equivalent of task (MET) value for the exercise."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "metValue"
+      ]
+    },
+    "Routine": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Routine",
+      "type": "object",
+      "description": "Represents a specific routine within a workout plan, containing multiple exercises.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Routine entity."
+        },
+        "workoutPlanId": {
+          "type": "string",
+          "description": "Reference to WorkoutPlan. (Relationship: WorkoutPlan 1:N Routine)"
+        },
+        "exerciseIds": {
+          "type": "array",
+          "description": "References to Exercises. (Relationship: Routine N:N Exercise)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration of the routine in minutes."
+        },
+        "sets": {
+          "type": "number",
+          "description": "The number of sets for the routine."
+        },
+        "reps": {
+          "type": "number",
+          "description": "The number of repititions for the routine."
+        },
+        "weight": {
+          "type": "number",
+          "description": "Weight used during the routine, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "workoutPlanId"
+      ]
+    },
+    "FoodItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FoodItem",
+      "type": "object",
+      "description": "Represents a food item with its nutritional information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FoodItem entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the food item (e.g., Apple, Chicken Breast)."
+        },
+        "calories": {
+          "type": "number",
+          "description": "Number of calories per serving."
+        },
+        "protein": {
+          "type": "number",
+          "description": "Amount of protein in grams per serving."
+        },
+        "carbs": {
+          "type": "number",
+          "description": "Amount of carbohydrates in grams per serving."
+        },
+        "fats": {
+          "type": "number",
+          "description": "Amount of fats in grams per serving."
+        },
+        "sugar": {
+          "type": "number",
+          "description": "Amount of sugar in grams per serving."
+        },
+        "fiber": {
+          "type": "number",
+          "description": "Amount of fiber in grams per serving."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "calories",
+        "protein",
+        "carbs",
+        "fats"
+      ]
+    },
+    "FoodLogEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FoodLogEntry",
+      "type": "object",
+      "description": "Represents a user's entry for a food item consumed on a specific day.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FoodLogEntry entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N FoodLogEntry)"
+        },
+        "foodItemId": {
+          "type": "string",
+          "description": "Reference to FoodItem. (Relationship: FoodItem 1:N FoodLogEntry)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date when the food item was consumed.",
+          "format": "date-time"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the food item consumed (e.g., number of servings)."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "foodItemId",
+        "date",
+        "quantity"
+      ]
+    },
+    "CalorieBudget": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CalorieBudget",
+      "type": "object",
+      "description": "Represents a user's daily calorie budget and tracking information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CalorieBudget entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:1 CalorieBudget)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date for which the calorie budget is defined.",
+          "format": "date-time"
+        },
+        "recommendedCalories": {
+          "type": "number",
+          "description": "Recommended daily calorie intake based on user's goals."
+        },
+        "caloriesConsumed": {
+          "type": "number",
+          "description": "Total calories consumed by the user on the specific date."
+        },
+        "caloriesBurned": {
+          "type": "number",
+          "description": "Total calories burned by the user through exercise on the specific date."
+        },
+        "goalDeficit": {
+          "type": "number",
+          "description": "Target calorie deficit for the user to achieve their goal."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "date",
+        "recommendedCalories"
+      ]
     }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/userProfile",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile data. Path-based ownership ensures only the authenticated user can access their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/workoutPlans/{workoutPlanId}",
+        "definition": {
+          "entityName": "WorkoutPlan",
+          "schema": {
+            "$ref": "#/backend/entities/WorkoutPlan"
+          },
+          "description": "Stores workout plans for a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "workoutPlanId",
+              "description": "The unique identifier for the workout plan."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}",
+        "definition": {
+          "entityName": "Routine",
+          "schema": {
+            "$ref": "#/backend/entities/Routine"
+          },
+          "description": "Stores routines within a workout plan. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "workoutPlanId",
+              "description": "The unique identifier for the workout plan."
+            },
+            {
+              "name": "routineId",
+              "description": "The unique identifier for the routine."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/foodLogEntries/{foodLogEntryId}",
+        "definition": {
+          "entityName": "FoodLogEntry",
+          "schema": {
+            "$ref": "#/backend/entities/FoodLogEntry"
+          },
+          "description": "Stores food log entries for a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "foodLogEntryId",
+              "description": "The unique identifier for the food log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/calorieBudgets/{calorieBudgetId}",
+        "definition": {
+          "entityName": "CalorieBudget",
+          "schema": {
+            "$ref": "#/backend/entities/CalorieBudget"
+          },
+          "description": "Stores calorie budgets for a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "calorieBudgetId",
+              "description": "The unique identifier for the calorie budget."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/exercises/{exerciseId}",
+        "definition": {
+          "entityName": "Exercise",
+          "schema": {
+            "$ref": "#/backend/entities/Exercise"
+          },
+          "description": "Stores globally available exercise data.",
+          "params": [
+            {
+              "name": "exerciseId",
+              "description": "The unique identifier for the exercise."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/foodItems/{foodItemId}",
+        "definition": {
+          "entityName": "FoodItem",
+          "schema": {
+            "$ref": "#/backend/entities/FoodItem"
+          },
+          "description": "Stores globally available food item data.",
+          "params": [
+            {
+              "name": "foodItemId",
+              "description": "The unique identifier for the food item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "roleAdmin",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Admin role, DBAC (roles_admin collection). Existence over Content",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support the QAPs (Rules Are Not Filters), and maintain data clarity for the FitFemAI application. User-owned data is stored under the `/users/{userId}` path, which will improve security rules simplicity and efficiency. Denormalization is applied where needed to avoid hierarchical authorization dependencies.\n\n1.  **User Profiles:** User profiles are stored in `/users/{userId}/userProfile`. This adheres to the Path-Based ownership model, ensuring that only the authenticated user can access their own profile. A single user profile per user is enforced.\n\n2.  **Workout Plans:** Workout plans are stored in `/users/{userId}/workoutPlans/{workoutPlanId}`. This follows the Hierarchical Paths for User-Owned Data strategy. Each workout plan belongs to a specific user, simplifying security rules and making ownership explicit.\n\n3.  **Routines:** Routines are stored in `/users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}`. This continues the hierarchical path structure for nested data. This structure makes querying routines for a specific workout plan efficient.\n\n4.  **Food Log Entries:** Food log entries are stored in `/users/{userId}/foodLogEntries/{foodLogEntryId}`. This adheres to the path-based ownership model.\n\n5.  **Calorie Budgets:** Calorie budgets are stored in `/users/{userId}/calorieBudgets/{calorieBudgetId}`. This adheres to the path-based ownership model. Since a 1:1 relationship is intended, consider enforcing a single document per date or using the date as the document ID within this structure.\n\n6.  **Exercises & Food Items:** Exercises and food items are stored in globally accessible collections (`/exercises`, `/foodItems`). Since these are generic and reusable, a global collection is appropriate. Security rules will need to prevent unauthorized creation/modification of these items. Consider an admin role using DBAC (roles_admin collection) for managing these collections.\n\n**Authorization Independence:** This structure achieves authorization independence by avoiding `get()` calls in security rules. Access control is primarily based on the user ID extracted from `request.auth.uid` and the path. For example, to access a workout plan, the rule simply checks if `request.auth.uid == userId` from the path. This avoids hierarchical authorization dependencies and enables atomic operations.\n\n**QAPs (Rules Are Not Filters):** The structure supports secure `list` operations because of the segregation of user-specific data under the `/users/{userId}` path. Listing workout plans, food log entries, or calorie budgets for a user is secure because the rules can easily filter based on the `userId` in the path. Global collections require additional checks in rules to ensure only authorized users create or modify the content."
+  }
 }

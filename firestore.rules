@@ -1,0 +1,257 @@
+/**
+ * @file Firestore Security Rules for FitFemAI Application
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for personal data (profiles, workout plans, food logs, calorie budgets)
+ * and restricts access to shared or public resources using an admin role.
+ *
+ * Data Structure:
+ * - User-specific data is nested under /users/{userId}, ensuring that only the authenticated user can access their own data.
+ * - Exercises and FoodItems are stored in top-level collections (/exercises, /foodItems) and are managed by admins.
+ * - Admin users are stored in a separate /roles_admin/{userId} collection; their existence grants elevated privileges.
+ *
+ * Key Security Decisions:
+ * - User listing is implicitly denied.
+ * - Data validation is relaxed during this prototyping phase, except for authorization-critical fields.
+ * - All write operations are validated against user ownership or admin privileges.
+ *
+ * Denormalization for Authorization:
+ * - User profile data is stored directly under /users/{userId}/userProfile, avoiding the need for separate lookups to determine ownership.
+ * - Admin privileges are determined by the existence of a document in /roles_admin/{userId}, simplifying admin-specific rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the current user is signed in.
+     * @return {bool} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId The user ID to compare against.
+     * @return {bool} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user is an existing owner of the document.
+     * @param {string} userId The user ID to compare against.
+     * @return {bool} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+     /**
+      * @description Checks if the authenticated user is an admin.
+      * @return {bool} True if the user is an admin, false otherwise.
+      */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+
+    /**
+     * @description Security rules for user profile data.
+     * @path /users/{userId}/userProfile
+     * @allow (create) User 'user_abc' can create their own profile.
+     *   request.auth.uid: 'user_abc'
+     *   request.resource.data.id: 'user_abc'
+     * @allow (get, update, delete) User 'user_abc' can read/write their own profile.
+     *   request.auth.uid: 'user_abc'
+     *   resource.data.id: 'user_abc'
+     * @deny (create) User 'user_def' cannot create a profile for 'user_abc'.
+     *   request.auth.uid: 'user_def'
+     *   request.resource.data.id: 'user_abc'
+     * @deny (get, update, delete) User 'user_def' cannot read/write 'user_abc' profile.
+     *   request.auth.uid: 'user_def'
+     *   resource.data.id: 'user_abc'
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/userProfile {
+      // Read Rules
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      // Write Rules
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for workout plans.
+     * @path /users/{userId}/workoutPlans/{workoutPlanId}
+     * @allow (create) User 'user_abc' can create a workout plan for themselves.
+     *   request.auth.uid: 'user_abc'
+     *   path: /users/user_abc/workoutPlans/plan_123
+     * @allow (get, update, delete) User 'user_abc' can read/write their own workout plans.
+     *   request.auth.uid: 'user_abc'
+     *   resource.data.userProfileId: 'user_abc'
+     * @deny (create) User 'user_def' cannot create a workout plan for 'user_abc'.
+     *   request.auth.uid: 'user_def'
+     *   path: /users/user_abc/workoutPlans/plan_123
+     * @deny (get, update, delete) User 'user_def' cannot read/write 'user_abc' workout plans.
+     *   request.auth.uid: 'user_def'
+     *   resource.data.userProfileId: 'user_abc'
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/workoutPlans/{workoutPlanId} {
+      // Read Rules
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      // Write Rules
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for routines within workout plans.
+     * @path /users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}
+     * @allow (create) User 'user_abc' can create a routine for their workout plan.
+     *   request.auth.uid: 'user_abc'
+     *   path: /users/user_abc/workoutPlans/plan_123/routines/routine_456
+     * @allow (get, update, delete) User 'user_abc' can read/write routines in their own workout plans.
+     *   request.auth.uid: 'user_abc'
+     *   resource.data.workoutPlanId: 'plan_123' (where plan_123 belongs to user_abc)
+     * @deny (create) User 'user_def' cannot create a routine for 'user_abc's workout plan.
+     *   request.auth.uid: 'user_def'
+     *   path: /users/user_abc/workoutPlans/plan_123/routines/routine_456
+     * @deny (get, update, delete) User 'user_def' cannot read/write routines in 'user_abc's workout plans.
+     *   request.auth.uid: 'user_def'
+     *   resource.data.workoutPlanId: 'plan_123' (where plan_123 belongs to user_abc)
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId} {
+      // Read Rules
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      // Write Rules
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for food log entries.
+     * @path /users/{userId}/foodLogEntries/{foodLogEntryId}
+     * @allow (create) User 'user_abc' can create a food log entry for themselves.
+     *   request.auth.uid: 'user_abc'
+     *   path: /users/user_abc/foodLogEntries/entry_789
+     * @allow (get, update, delete) User 'user_abc' can read/write their own food log entries.
+     *   request.auth.uid: 'user_abc'
+     *   resource.data.userProfileId: 'user_abc'
+     * @deny (create) User 'user_def' cannot create a food log entry for 'user_abc'.
+     *   request.auth.uid: 'user_def'
+     *   path: /users/user_abc/foodLogEntries/entry_789
+     * @deny (get, update, delete) User 'user_def' cannot read/write 'user_abc' food log entries.
+     *   request.auth.uid: 'user_def'
+     *   resource.data.userProfileId: 'user_abc'
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/foodLogEntries/{foodLogEntryId} {
+      // Read Rules
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      // Write Rules
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for calorie budgets.
+     * @path /users/{userId}/calorieBudgets/{calorieBudgetId}
+     * @allow (create) User 'user_abc' can create a calorie budget for themselves.
+     *   request.auth.uid: 'user_abc'
+     *   path: /users/user_abc/calorieBudgets/budget_101
+     * @allow (get, update, delete) User 'user_abc' can read/write their own calorie budgets.
+     *   request.auth.uid: 'user_abc'
+     *   resource.data.userProfileId: 'user_abc'
+     * @deny (create) User 'user_def' cannot create a calorie budget for 'user_abc'.
+     *   request.auth.uid: 'user_def'
+     *   path: /users/user_abc/calorieBudgets/budget_101
+     * @deny (get, update, delete) User 'user_def' cannot read/write 'user_abc' calorie budgets.
+     *   request.auth.uid: 'user_def'
+     *   resource.data.userProfileId: 'user_abc'
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/calorieBudgets/{calorieBudgetId} {
+      // Read Rules
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      // Write Rules
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Security rules for globally available exercise data.
+     * @path /exercises/{exerciseId}
+     * @allow (get, list) Everyone can read exercise data.
+     * @allow (create, update, delete) Only admins can create, update, or delete exercises.
+     * @deny (create, update, delete) Non-admins cannot modify exercise data.
+     *   request.auth.uid: 'user_abc' (where user_abc is not an admin)
+     * @principle Allows public read access and restricts write access to admins.
+     */
+    match /exercises/{exerciseId} {
+      // Read Rules
+      allow get: if true;
+      allow list: if true;
+
+      // Write Rules
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Security rules for globally available food item data.
+     * @path /foodItems/{foodItemId}
+     * @allow (get, list) Everyone can read food item data.
+     * @allow (create, update, delete) Only admins can create, update, or delete food items.
+     * @deny (create, update, delete) Non-admins cannot modify food item data.
+     *   request.auth.uid: 'user_abc' (where user_abc is not an admin)
+     * @principle Allows public read access and restricts write access to admins.
+     */
+    match /foodItems/{foodItemId} {
+      // Read Rules
+      allow get: if true;
+      allow list: if true;
+
+      // Write Rules
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+      /**
+       * @description Rules for roles_admin collection. For DBAC model.
+       * @path /roles_admin/{userId}
+       * @allow (get, list) All can see the Admin roles
+       * @allow (create, update, delete) Only Admins can manage it.
+       * @principle DBAC (role admin collection), existence over content
+       */
+    match /roles_admin/{userId} {
+       allow get: if isAdmin();
+       allow list: if isAdmin();
+       allow create: if isAdmin();
+       allow update: if isAdmin() && resource != null;
+       allow delete: if isAdmin() && resource != null;
+    }
+
+  }
+}
