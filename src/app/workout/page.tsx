@@ -66,7 +66,7 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
   const match = plan.match(dayRegex);
 
   if (!match || !match[1]) {
-    // If today's workout is rest or not found, return an empty array or a rest block
+    // If today's workout is rest or not found, return a rest block
     if (plan.toLowerCase().includes(today.toLowerCase()) && plan.toLowerCase().includes('rest')) {
         return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
     }
@@ -90,22 +90,21 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
         duration = parseInt(durationMatch[1], 10);
       }
     } else if (exerciseMatch[3] && exerciseMatch[4]) { // Reps format like "3 sets of 12 reps"
-      const sets = parseInt(exerciseMatch[3], 10);
-      const reps = parseInt(exerciseMatch[4], 10);
-      // Estimate duration: ~3 seconds per rep, 60s rest between sets
-      duration = (sets * reps * 3) + ((sets - 1) * 60);
-      // We are only handling duration based workouts for now, so we will simplify this.
+      // This is a rep-based exercise. We'll assign a standard duration for now as the timer is duration-based.
+      // A more complex implementation could handle reps differently.
       duration = 45;
     }
     
-    // For now, use placeholder GIFs and data
+    // For now, use placeholder GIFs and data, trying to match default exercises where possible
+    const defaultExercise = defaultExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+
     exercises.push({
       name,
       duration,
-      gifUrl: `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
-      youtubeUrl: '',
+      gifUrl: defaultExercise?.gifUrl || `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
+      youtubeUrl: defaultExercise?.youtubeUrl || '',
       calories: Math.floor(duration * 0.7), // Rough calorie estimate
-      imageHint: name.toLowerCase(),
+      imageHint: defaultExercise?.imageHint || name.toLowerCase(),
     });
 
     // Add a rest period after each exercise
@@ -119,7 +118,7 @@ function parseTodaysWorkout(plan: string, today: string): Exercise[] {
     });
   }
   
-  // Remove the last rest period
+  // Remove the last rest period if it exists
   if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
     exercises.pop();
   }
@@ -133,17 +132,22 @@ export default function WorkoutPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // This code runs only on the client
     const plan = sessionStorage.getItem('workoutPlan');
     if (plan) {
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
       const parsedExercises = parseTodaysWorkout(plan, today);
+      
+      // Check if parsing returned exercises or if it's a designated rest day
       if (parsedExercises.length > 0) {
         setTodaysExercises(parsedExercises);
       } else {
-        // Fallback to default if parsing fails or it's a rest day with no specific exercises
-        setTodaysExercises(defaultExercises);
+        // This case handles when the plan exists but no exercises are found for today,
+        // which implies a rest day or parsing failure. We'll show the rest day card.
+        setTodaysExercises([{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }]);
       }
     } else {
+      // If no plan is in session storage, use the default workout
       setTodaysExercises(defaultExercises);
     }
     setIsLoading(false);
