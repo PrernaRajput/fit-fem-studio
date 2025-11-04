@@ -53,11 +53,14 @@ export function ProgressCalendar() {
     setDate(selectedDate);
   };
   
-  const DayWithDot = ({ date: dayDate }: { date: Date }) => {
+  const DayWithDot = ({ date: dayDate, ...props }: { date: Date, displayMonth: Date }) => {
     const dateKey = format(dayDate, 'yyyy-MM-dd');
     const hasData = mockData[dateKey];
     return (
-      <div className={cn("relative h-9 w-9 flex items-center justify-center")}>
+      <div
+        className={cn("relative h-9 w-9 flex items-center justify-center")}
+        {...props}
+      >
         {format(dayDate, 'd')}
         {hasData && (
           <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
