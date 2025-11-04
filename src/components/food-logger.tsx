@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { getFoodAnalysis } from '@/app/actions';
 import {
   Card,
@@ -48,6 +48,7 @@ import { recommendCalories, RecommendCaloriesInput } from '@/ai/ai-calorie-budge
 import { AnalyzeFoodOutput, Measurement } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 type LoggedFoodItem = {
@@ -115,10 +116,47 @@ export function FoodLogger() {
     const [searchResult, setSearchResult] = useState<AnalyzeFoodOutput | null>(null);
     const [activeCategory, setActiveCategory] = useState<keyof MealLog | null>(null);
 
+    // State for barcode scanner
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
     const consumedCalories = Object.values(mealLog).flat().reduce((acc, item) => acc + calculateItemCalories(item), 0);
     const remaining = calories.budget - consumedCalories + calories.burned;
     const consumedPercentage = (consumedCalories / calories.budget) * 100;
     const waterPercentage = (water.consumed / water.goal) * 100;
+
+    useEffect(() => {
+        let stream: MediaStream;
+        const getCameraPermission = async () => {
+          if (!isScannerOpen) return;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            setHasCameraPermission(true);
+    
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+            }
+          } catch (error) {
+            console.error('Error accessing camera:', error);
+            setHasCameraPermission(false);
+            toast({
+              variant: 'destructive',
+              title: 'Camera Access Denied',
+              description: 'Please enable camera permissions in your browser settings to use this app.',
+            });
+          }
+        };
+    
+        getCameraPermission();
+    
+        // Cleanup function to stop the camera stream when the dialog is closed
+        return () => {
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+        };
+      }, [isScannerOpen, toast]);
 
     const handleWaterChange = (amount: number) => {
         setWater(prev => ({ ...prev, consumed: Math.max(0, prev.consumed + amount) }));
@@ -374,10 +412,30 @@ export function FoodLogger() {
                 </div>
               </DialogContent>
             </Dialog>
-
-            <Button variant="outline" className="w-full">
-              <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
-            </Button>
+            <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Scan Barcode</DialogTitle>
+                    </DialogHeader>
+                    <div className="relative flex justify-center items-center">
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay playsInline muted />
+                        {hasCameraPermission === false && (
+                            <Alert variant="destructive">
+                                <AlertTitle>Camera Access Required</AlertTitle>
+                                <AlertDescription>
+                                    Please allow camera access to use this feature.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/2 border-2 border-red-500/80 rounded-lg" />
+                    </div>
+                </DialogContent>
+            </Dialog>
 
           {/* Meal Categories */}
           <div className="space-y-4">
