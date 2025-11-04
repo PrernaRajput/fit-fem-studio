@@ -26,3 +26,12 @@ export const LookupFoodByBarcodeInputSchema = z.object({
   barcode: z.string().describe('The UPC or EAN barcode of the food product.'),
 });
 export type LookupFoodByBarcodeInput = z.infer<typeof LookupFoodByBarcodeInputSchema>;
+
+export const AnalyzeFoodImageInputSchema = z.object({
+    photoDataUri: z
+      .string()
+      .describe(
+        "A photo of a food item, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      ),
+});
+export type AnalyzeFoodImageInput = z.infer<typeof AnalyzeFoodImageInputSchema>;

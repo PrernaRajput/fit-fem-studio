@@ -11,6 +11,9 @@ import {
 import {
   lookupFoodByBarcode,
 } from '@/ai/ai-barcode-food-lookup';
+import {
+  analyzeFoodImage as analyzeFoodImageFlow,
+} from '@/ai/ai-food-image-analyzer';
 
 import { z } from 'zod';
 import { AnalyzeFoodInputSchema, type AnalyzeFoodInput, type AnalyzeFoodOutput, LookupFoodByBarcodeInputSchema } from '@/lib/types';
@@ -80,3 +83,19 @@ export async function getFoodFromBarcode(
     return { success: false, data: null, error: 'An unexpected error occurred while looking up the barcode. Please try again.' };
   }
 }
+
+export async function analyzeFoodImage(
+    imageDataUri: string
+  ): Promise<{ success: boolean; data: AnalyzeFoodOutput | null; error: string | null }> {
+    if (!imageDataUri) {
+      return { success: false, data: null, error: 'No image data provided.' };
+    }
+  
+    try {
+      const foodData = await analyzeFoodImageFlow({ photoDataUri: imageDataUri });
+      return { success: true, data: foodData, error: null };
+    } catch (e) {
+      console.error(e);
+      return { success: false, data: null, error: 'An unexpected error occurred while analyzing the image. Please try again.' };
+    }
+  }

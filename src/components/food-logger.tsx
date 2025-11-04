@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { getFoodAnalysis, getFoodFromBarcode } from '@/app/actions';
+import { getFoodAnalysis, getFoodFromBarcode, analyzeFoodImage } from '@/app/actions';
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ import {
   X,
   Loader2,
   Settings,
+  Camera,
 } from 'lucide-react';
 import {
   Dialog,
@@ -122,10 +123,12 @@ export function FoodLogger() {
     const [scannedItemCategory, setScannedItemCategory] = useState<keyof MealLog>('Snacks');
 
 
-    // State for barcode scanner
+    // State for barcode scanner & food scanner
     const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scannerMode, setScannerMode] = useState<'barcode' | 'food'>('barcode');
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
@@ -154,10 +157,42 @@ export function FoodLogger() {
         }
     };
 
+    const handleFoodImageCapture = async () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            if (context) {
+                context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                const dataUri = canvas.toDataURL('image/jpeg');
+                
+                setIsScannerOpen(false);
+                setIsSearching(true);
+                toast({ title: 'Image Captured!', description: 'Analyzing your food...' });
+
+                const result = await analyzeFoodImage(dataUri);
+                setIsSearching(false);
+
+                if (result.success && result.data) {
+                    setScannedFoodResult(result.data);
+                    setIsScannedItemLogOpen(true);
+                } else {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Analysis Failed',
+                        description: result.error || 'Could not identify the food in the image.',
+                    });
+                }
+            }
+        }
+    };
+
     useEffect(() => {
         let stream: MediaStream | undefined;
     
-        const startScan = async (videoElement: HTMLVideoElement) => {
+        const startBarcodeScan = async (videoElement: HTMLVideoElement) => {
             if (!('BarcodeDetector' in window)) {
                 console.error('Barcode Detector is not supported in this browser.');
                 toast({
@@ -210,7 +245,9 @@ export function FoodLogger() {
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
               videoRef.current.play(); // Ensure video is playing
-              await startScan(videoRef.current);
+              if (scannerMode === 'barcode') {
+                await startBarcodeScan(videoRef.current);
+              }
             }
           } catch (error) {
             console.error('Error accessing camera:', error);
@@ -234,7 +271,7 @@ export function FoodLogger() {
             clearInterval(scanningIntervalRef.current);
           }
         };
-      }, [isScannerOpen, toast]);
+      }, [isScannerOpen, scannerMode, toast]);
 
     const handleWaterChange = (amount: number) => {
         setWater(prev => ({ ...prev, consumed: Math.max(0, prev.consumed + amount) }));
@@ -259,6 +296,11 @@ export function FoodLogger() {
         setSearchResult(null);
         setFoodQuery('');
         setIsFoodLogOpen(true);
+    };
+
+    const openScanner = (mode: 'barcode' | 'food') => {
+        setScannerMode(mode);
+        setIsScannerOpen(true);
     };
 
     const handleFoodSearch = async () => {
@@ -342,6 +384,7 @@ export function FoodLogger() {
 
   return (
     <div className="container mx-auto px-4">
+      <canvas ref={canvasRef} className="hidden"></canvas>
       <Card className="max-w-2xl mx-auto overflow-hidden shadow-2xl rounded-2xl border-primary/20 bg-card">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-primary">
@@ -511,16 +554,11 @@ export function FoodLogger() {
               </DialogContent>
             </Dialog>
 
-            {/* Barcode Scanner Dialog */}
+            {/* Scanner Dialog */}
             <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                        <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
-                    </Button>
-                </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Scan Barcode</DialogTitle>
+                        <DialogTitle>Scan {scannerMode === 'barcode' ? 'Barcode' : 'Food'}</DialogTitle>
                     </DialogHeader>
                     <div className="relative flex justify-center items-center">
                         <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay playsInline muted />
@@ -532,8 +570,16 @@ export function FoodLogger() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/2 border-2 border-red-500/80 rounded-lg" />
+                        {scannerMode === 'barcode' && (
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-1/2 border-2 border-red-500/80 rounded-lg" />
+                        )}
                     </div>
+                    {scannerMode === 'food' && hasCameraPermission && (
+                        <Button onClick={handleFoodImageCapture} disabled={isSearching}>
+                            {isSearching ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
+                            {isSearching ? 'Analyzing...' : 'Capture'}
+                        </Button>
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -578,6 +624,15 @@ export function FoodLogger() {
                     )}
                 </DialogContent>
             </Dialog>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button variant="outline" className="w-full" onClick={() => openScanner('barcode')}>
+                <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => openScanner('food')}>
+                <Camera className="mr-2 h-4 w-4" /> Scan Food
+            </Button>
+          </div>
 
           {/* Meal Categories */}
           <div className="space-y-4">
