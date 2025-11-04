@@ -21,18 +21,15 @@
         },
         "age": {
           "type": "number",
-          "description": "User's age in years.",
-          "format": "number"
+          "description": "User's age in years."
         },
         "weight": {
           "type": "number",
-          "description": "User's weight in kilograms.",
-          "format": "number"
+          "description": "User's weight in kilograms."
         },
         "height": {
           "type": "number",
-          "description": "User's height in centimeters.",
-          "format": "number"
+          "description": "User's height in centimeters."
         },
         "fitnessLevel": {
           "type": "string",
@@ -45,6 +42,31 @@
         "dietaryPreferences": {
           "type": "string",
           "description": "User's dietary preferences (e.g., vegetarian, vegan, gluten-free)."
+        },
+        "bodyMeasurements": {
+            "type": "array",
+            "description": "User's body measurements.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "value": {"type": "string"},
+                    "unit": {"type": "string"}
+                },
+                "required": ["name", "value", "unit"]
+            }
+        },
+        "idealSleepHours": {
+            "type": "number",
+            "description": "User's ideal sleep hours goal."
+        },
+        "loggedPeriodDays": {
+            "type": "array",
+            "description": "An array of dates when the user logged their period.",
+            "items": {
+                "type": "string",
+                "format": "date-time"
+            }
         }
       },
       "required": [
@@ -467,4 +489,5 @@
     "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support the QAPs (Rules Are Not Filters), and maintain data clarity for the FitFemAI application. User-owned data is stored under the `/users/{userId}` path, which will improve security rules simplicity and efficiency. Denormalization is applied where needed to avoid hierarchical authorization dependencies.\n\n1.  **User Profiles:** User profiles are stored in `/users/{userId}/userProfile`. This adheres to the Path-Based ownership model, ensuring that only the authenticated user can access their own profile. A single user profile per user is enforced.\n\n2.  **Workout Plans:** Workout plans are stored in `/users/{userId}/workoutPlans/{workoutPlanId}`. This follows the Hierarchical Paths for User-Owned Data strategy. Each workout plan belongs to a specific user, simplifying security rules and making ownership explicit.\n\n3.  **Routines:** Routines are stored in `/users/{userId}/workoutPlans/{workoutPlanId}/routines/{routineId}`. This continues the hierarchical path structure for nested data. This structure makes querying routines for a specific workout plan efficient.\n\n4.  **Food Log Entries:** Food log entries are stored in `/users/{userId}/foodLogEntries/{foodLogEntryId}`. This adheres to the path-based ownership model.\n\n5.  **Calorie Budgets:** Calorie budgets are now stored in `/users/{userId}/calorieBudgets/{date}` where `date` is `yyyy-MM-dd`. This adheres to the path-based ownership model and makes it easy to look up a budget for a specific day.\n\n6.  **Exercises & Food Items:** Exercises and food items are stored in globally accessible collections (`/exercises`, `/foodItems`). Since these are generic and reusable, a global collection is appropriate. Security rules will need to prevent unauthorized creation/modification of these items. Consider an admin role using DBAC (roles_admin collection) for managing these collections.\n\n**Authorization Independence:** This structure achieves authorization independence by avoiding `get()` calls in security rules. Access control is primarily based on the user ID extracted from `request.auth.uid` and the path. For example, to access a workout plan, the rule simply checks if `request.auth.uid == userId` from the path. This avoids hierarchical authorization dependencies and enables atomic operations.\n\n**QAPs (Rules Are Not Filters):** The structure supports secure `list` operations because of the segregation of user-specific data under the `/users/{userId}` path. Listing workout plans, food log entries, or calorie budgets for a user is secure because the rules can easily filter based on the `userId` in the path. Global collections require additional checks in rules to ensure only authorized users create or modify the content."
   }
 }
+
     

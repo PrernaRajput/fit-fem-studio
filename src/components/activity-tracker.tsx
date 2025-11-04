@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   Card,
   CardContent,
@@ -11,7 +12,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from './ui/button';
-import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { Footprints, Target, Info, BedDouble, CalendarHeart, Ruler, Clock, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import {
     ChartContainer,
     ChartTooltipContent,
@@ -22,9 +23,11 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays, getMonth, startOfMonth, getDaysInMonth } from 'date-fns';
+import { addDays, subDays, format, startOfWeek, isSameDay, differenceInCalendarDays, getMonth, parseISO } from 'date-fns';
 import { Carousel, CarouselContent, CarouselItem } from './ui/carousel';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
 const mockHourlyData = [
@@ -42,18 +45,18 @@ const mockHourlyData = [
     { hour: '5pm', steps: 1800 },
     { hour: '6pm', steps: 2200 },
     { hour: '7pm', steps: 900 },
-  ];
+];
 
 const totalSteps = mockHourlyData.reduce((acc, curr) => acc + curr.steps, 0);
 const dailyGoal = 10000;
 const progress = Math.min((totalSteps / dailyGoal) * 100, 100);
 
 const initialBodyMeasurements = [
-    { name: 'Waist', value: '28', unit: 'in' },
-    { name: 'Hips', value: '38', unit: 'in' },
-    { name: 'Thigh', value: '21', unit: 'in' },
-    { name: 'Arm', value: '11', unit: 'in' },
-    { name: 'Chest', value: '34', unit: 'in' },
+    { name: 'Waist', value: '0', unit: 'in' },
+    { name: 'Hips', value: '0', unit: 'in' },
+    { name: 'Thigh', value: '0', unit: 'in' },
+    { name: 'Arm', value: '0', unit: 'in' },
+    { name: 'Chest', value: '0', unit: 'in' },
 ];
 
 const getCyclePhase = (cycleDay: number) => {
@@ -71,22 +74,53 @@ const cyclePhases = [
     { name: 'Luteal', color: 'bg-pink-400/30' },
 ];
 
+type BodyMeasurement = {
+    name: string;
+    value: string;
+    unit: string;
+};
 
 export function ActivityTracker() {
-    const [bodyMeasurements, setBodyMeasurements] = useState(initialBodyMeasurements);
-    const [tempMeasurements, setTempMeasurements] = useState(initialBodyMeasurements);
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const userProfileRef = useMemoFirebase(() => {
+      if (!user || !firestore) return null;
+      return doc(firestore, 'users', user.uid, 'userProfile', user.uid);
+    }, [user, firestore]);
+  
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+
+    const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>(initialBodyMeasurements);
+    const [tempMeasurements, setTempMeasurements] = useState<BodyMeasurement[]>(initialBodyMeasurements);
     const [idealSleepHours, setIdealSleepHours] = useState(8);
     const [tempIdealSleep, setTempIdealSleep] = useState(8);
 
-    // Cycle tracking state
     const [currentDate] = useState(new Date());
     const [displayWeek, setDisplayWeek] = useState(startOfWeek(new Date()));
     const [loggedPeriodDays, setLoggedPeriodDays] = useState<Date[]>([]);
     
-    // Default cycle start day, will be updated by logged period days
     const [cycleStartDay, setCycleStartDay] = useState(subDays(new Date(), 13)); 
     const [calendarMonth, setCalendarMonth] = useState(new Date());
 
+    useEffect(() => {
+        if (userProfile) {
+            setBodyMeasurements(userProfile.bodyMeasurements || initialBodyMeasurements);
+            setTempMeasurements(userProfile.bodyMeasurements || initialBodyMeasurements);
+            setIdealSleepHours(userProfile.idealSleepHours || 8);
+            setTempIdealSleep(userProfile.idealSleepHours || 8);
+            
+            const savedPeriodDays = (userProfile.loggedPeriodDays || []).map((day: any) => 
+                day.toDate ? day.toDate() : parseISO(day)
+            );
+            savedPeriodDays.sort((a, b) => a.getTime() - b.getTime());
+            setLoggedPeriodDays(savedPeriodDays);
+
+            if (savedPeriodDays.length > 0) {
+                setCycleStartDay(savedPeriodDays[0]);
+            }
+        }
+    }, [userProfile]);
 
     const dayInCycle = useMemo(() => {
         return differenceInCalendarDays(currentDate, cycleStartDay) % 28 + 1;
@@ -102,10 +136,16 @@ export function ActivityTracker() {
 
     const saveMeasurements = () => {
         setBodyMeasurements(tempMeasurements);
+        if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { bodyMeasurements: tempMeasurements }, { merge: true });
+        }
     };
 
     const saveSleepGoal = () => {
         setIdealSleepHours(tempIdealSleep);
+        if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { idealSleepHours: tempIdealSleep }, { merge: true });
+        }
     };
 
     const handleLogPeriod = (day: Date) => {
@@ -115,12 +155,14 @@ export function ActivityTracker() {
         
         newLoggedDays.sort((a, b) => a.getTime() - b.getTime());
         setLoggedPeriodDays(newLoggedDays);
-    
+        
+        if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { loggedPeriodDays: newLoggedDays }, { merge: true });
+        }
+
         if (newLoggedDays.length > 0) {
-          // The new cycle starts on the first logged day
           setCycleStartDay(newLoggedDays[0]);
         } else {
-          // Revert to default if all logs are removed
           setCycleStartDay(subDays(new Date(), 13));
         }
       };
@@ -148,6 +190,14 @@ export function ActivityTracker() {
     const nextPredictedPeriodStart = useMemo(() => {
         return addDays(cycleStartDay, 28);
     }, [cycleStartDay]);
+
+  if (isProfileLoading) {
+      return (
+        <div className="flex items-center justify-center h-96">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+  }
 
   return (
     <div className="container mx-auto px-4">
@@ -423,3 +473,5 @@ export function ActivityTracker() {
     </div>
   );
 }
+
+    
