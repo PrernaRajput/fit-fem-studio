@@ -73,19 +73,19 @@ const cyclePhases = [
         name: 'Menstrual', 
         color: 'bg-red-400/30', 
         title: "Menstrual Phase (Days ~1–5)",
-        description: `### What happens:\n\nThe endometrium (uterine lining) from the previous cycle breaks down and exits the body.\n\nThis is visible as menstrual blood, a mix of blood, tissue, and mucus.\n\n### Why it happens:\n\nThe corpus luteum from the previous cycle stops producing hormones.\n\nProgesterone and estrogen drop sharply, signaling the body to shed the lining.\n\n### Hormones:\n\nEstrogen ⬇️\n\nProgesterone ⬇️\n\nFSH (Follicle Stimulating Hormone) slowly begins ⬆️ to prepare the next phase\n\n### Common symptoms:\n\nCramps (uterus contracts to push lining out)\n\nLower back pain\n\nTiredness\n\nMood changes\n\nFood cravings`
+        description: `### What happens:\n\nThe endometrium (uterine lining) from the previous cycle breaks down and exits the body.\n\nThis is visible as menstrual blood, a mix of blood, tissue, and mucus.\n\n### Why it happens:\n\nThe corpus luteum from the previous cycle stops producing hormones.\n\nProgesterone and estrogen drop sharply, signaling the body to shed the lining.\n\n### Hormones:\n\n • Estrogen ↓ \n\n • Progesterone ↓ \n\n • FSH (Follicle Stimulating Hormone) slowly begins ↑ to prepare the next phase\n\n### Common symptoms:\n\nCramps (uterus contracts to push lining out)\n\nLower back pain\n\nTiredness\n\nMood changes\n\nFood cravings`
     },
     { 
         name: 'Follicular', 
         color: 'bg-green-400/30',
         title: "Follicular Phase (Days ~1–13)",
-        description: `### What happens:\n\nThe pituitary gland releases FSH.\n\nSeveral follicles start growing in the ovaries, each holding an immature egg.\n\nUsually, only one follicle becomes dominant and matures.\n\n### Hormones:\n\nFSH ⬆️ stimulates follicle growth.\n\nEstrogen increases steadily as the follicle matures.\n\n### Inside the uterus:\n\nEstrogen rebuilds and thickens the uterine lining to prepare again for pregnancy.\n\n### Symptoms:\n\nEnergy increases\n\nMood improves\n\nSkin may clear\n\nCervical mucus becomes lighter and wetter\n\nThis phase ends when estrogen peaks and triggers the next phase—ovulation.` 
+        description: `### What happens:\n\nThe pituitary gland releases FSH.\n\nSeveral follicles start growing in the ovaries, each holding an immature egg.\n\nUsually, only one follicle becomes dominant and matures.\n\n### Hormones:\n\n • FSH ↑ stimulates follicle growth.\n\n • Estrogen increases steadily as the follicle matures.\n\n### Inside the uterus:\n\nEstrogen rebuilds and thickens the uterine lining to prepare again for pregnancy.\n\n### Symptoms:\n\nEnergy increases\n\nMood improves\n\nSkin may clear\n\nCervical mucus becomes lighter and wetter\n\nThis phase ends when estrogen peaks and triggers the next phase—ovulation.` 
     },
     { 
         name: 'Ovulation', 
         color: 'bg-blue-400/30',
         title: "Ovulation (Around Day 14)",
-        description: `### What happens:\n\nThe LH surge causes the mature follicle to burst, releasing an egg.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\n### Fertility:\n\nEgg survives 12–24 hours once released.\n\nSperm can survive up to 5 days, so fertility is highest in the days before ovulation.\n\n### Hormones:\n\nEstrogen reaches its highest level → triggers LH surge.\n\nLH spike releases the egg.\n\n### Signs someone might feel:\n\nIncrease in sex drive\n\nClear, stretchy “egg-white” cervical mucus\n\nSlight rise in basal body temperature\n\nMild ovary pain (called mittelschmerz)\n\nOvulation is the only time pregnancy can occur in the cycle.` 
+        description: `### What happens:\n\nThe LH surge causes the mature follicle to burst, releasing an egg.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\n### Fertility:\n\nEgg survives 12–24 hours once released.\n\nSperm can survive up to 5 days, so fertility is highest in the days before ovulation.\n\n### Hormones:\n\n • Estrogen reaches its highest level → triggers LH surge.\n\n • LH spike releases the egg.\n\n### Signs someone might feel:\n\nIncrease in sex drive\n\nClear, stretchy “egg-white” cervical mucus\n\nSlight rise in basal body temperature\n\nMild ovary pain (called mittelschmerz)\n\nOvulation is the only time pregnancy can occur in the cycle.` 
     },
     { 
         name: 'Luteal', 
@@ -134,7 +134,7 @@ export function ActivityTracker() {
             const savedPeriodDays = (userProfile.loggedPeriodDays || []).map((day: any) => 
                 day.toDate ? day.toDate() : parseISO(day)
             );
-            savedPeriodDays.sort((a, b) => a.getTime() - b.getTime());
+            savedPeriodDays.sort((a: { getTime: () => number; }, b: { getTime: () => number; }) => a.getTime() - b.getTime());
             setLoggedPeriodDays(savedPeriodDays);
 
             if (savedPeriodDays.length > 0) {
