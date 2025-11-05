@@ -27,7 +27,7 @@ export function Header() {
           <span className="font-bold">FitFemAI</span>
         </Link>
         <nav className="flex flex-1 items-center space-x-6 text-sm font-medium">
-         {user && (
+         {user && !isLoading && (
             <Link href="/" className="text-foreground/60 transition-colors hover:text-foreground/80">
               <Home className="h-5 w-5" />
               <span className="sr-only">Home</span>
