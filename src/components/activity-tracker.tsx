@@ -18,7 +18,7 @@ import {
     ChartTooltipContent,
   } from "@/components/ui/chart"
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from './ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { Input } from './ui/input';
@@ -68,10 +68,10 @@ const getCyclePhase = (cycleDay: number) => {
 };
 
 const cyclePhases = [
-    { name: 'Menstrual', color: 'bg-red-400/30' },
-    { name: 'Follicular', color: 'bg-green-400/30' },
-    { name: 'Ovulation', color: 'bg-blue-400/30' },
-    { name: 'Luteal', color: 'bg-pink-400/30' },
+    { name: 'Menstrual', color: 'bg-red-400/30', description: "Days 1-5. Hormone levels are low, which might mean less energy. It's a great time for rest, gentle movements like yoga, and nourishing foods." },
+    { name: 'Follicular', color: 'bg-green-400/30', description: "Days 6-13. Estrogen rises, boosting energy and mood. This is an ideal time for high-intensity workouts and challenging your fitness goals." },
+    { name: 'Ovulation', color: 'bg-blue-400/30', description: "Around Day 14. You're at your peak for energy and strength! This is the perfect time to push for personal bests in strength training or high-impact cardio." },
+    { name: 'Luteal', color: 'bg-pink-400/30', description: "Days 16-28. Progesterone rises, which can sometimes lead to lower energy or PMS. Focus on moderate-intensity exercises and listen to your body." },
 ];
 
 type BodyMeasurement = {
@@ -399,10 +399,20 @@ export function ActivityTracker() {
 
                     <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs px-2">
                         {cyclePhases.map(phase => (
-                            <div key={phase.name} className="flex items-center gap-2">
-                                <div className={cn("w-3 h-3 rounded-full", phase.color)} />
-                                <span>{phase.name}</span>
-                            </div>
+                            <Dialog key={phase.name}>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center gap-2 cursor-pointer">
+                                        <div className={cn("w-3 h-3 rounded-full", phase.color)} />
+                                        <span>{phase.name}</span>
+                                    </div>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>{phase.name} Phase</DialogTitle>
+                                        <DialogDescription>{phase.description}</DialogDescription>
+                                    </DialogHeader>
+                                </DialogContent>
+                            </Dialog>
                         ))}
                          <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-accent" />
