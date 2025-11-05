@@ -73,25 +73,25 @@ const cyclePhases = [
         name: 'Menstrual', 
         color: 'bg-red-400/30', 
         title: "Menstrual Phase (Days ~1–5)",
-        description: `What happens:\n\nThe endometrium (uterine lining) from the previous cycle breaks down and exits the body.\n\nThis is visible as menstrual blood, a mix of blood, tissue, and mucus.\n\nWhy it happens:\n\nThe corpus luteum from the previous cycle stops producing hormones.\n\nProgesterone and estrogen drop sharply, signaling the body to shed the lining.\n\nHormones:\n\nEstrogen ⬇️\n\nProgesterone ⬇️\n\nFSH (Follicle Stimulating Hormone) slowly begins ⬆️ to prepare the next phase\n\nCommon symptoms:\n\nCramps (uterus contracts to push lining out)\n\nLower back pain\n\nTiredness\n\nMood changes\n\nFood cravings`
+        description: `### What happens:\n\nThe endometrium (uterine lining) from the previous cycle breaks down and exits the body.\n\nThis is visible as menstrual blood, a mix of blood, tissue, and mucus.\n\n### Why it happens:\n\nThe corpus luteum from the previous cycle stops producing hormones.\n\nProgesterone and estrogen drop sharply, signaling the body to shed the lining.\n\n### Hormones:\n\nEstrogen ⬇️\n\nProgesterone ⬇️\n\nFSH (Follicle Stimulating Hormone) slowly begins ⬆️ to prepare the next phase\n\n### Common symptoms:\n\nCramps (uterus contracts to push lining out)\n\nLower back pain\n\nTiredness\n\nMood changes\n\nFood cravings`
     },
     { 
         name: 'Follicular', 
         color: 'bg-green-400/30',
         title: "Follicular Phase (Days ~1–13)",
-        description: `What happens:\n\nThe pituitary gland releases FSH.\n\nSeveral follicles start growing in the ovaries, each holding an immature egg.\n\nUsually, only one follicle becomes dominant and matures.\n\nHormones:\n\nFSH ⬆️ stimulates follicle growth.\n\nEstrogen increases steadily as the follicle matures.\n\nInside the uterus:\n\nEstrogen rebuilds and thickens the uterine lining to prepare again for pregnancy.\n\nSymptoms:\n\nEnergy increases\n\nMood improves\n\nSkin may clear\n\nCervical mucus becomes lighter and wetter\n\nThis phase ends when estrogen peaks and triggers the next phase—ovulation.` 
+        description: `### What happens:\n\nThe pituitary gland releases FSH.\n\nSeveral follicles start growing in the ovaries, each holding an immature egg.\n\nUsually, only one follicle becomes dominant and matures.\n\n### Hormones:\n\nFSH ⬆️ stimulates follicle growth.\n\nEstrogen increases steadily as the follicle matures.\n\n### Inside the uterus:\n\nEstrogen rebuilds and thickens the uterine lining to prepare again for pregnancy.\n\n### Symptoms:\n\nEnergy increases\n\nMood improves\n\nSkin may clear\n\nCervical mucus becomes lighter and wetter\n\nThis phase ends when estrogen peaks and triggers the next phase—ovulation.` 
     },
     { 
         name: 'Ovulation', 
         color: 'bg-blue-400/30',
         title: "Ovulation (Around Day 14)",
-        description: `What happens:\n\nThe LH surge causes the mature follicle to burst, releasing an egg.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\nFertility:\n\nEgg survives 12–24 hours once released.\n\nSperm can survive up to 5 days, so fertility is highest in the days before ovulation.\n\nHormones:\n\nEstrogen reaches its highest level → triggers LH surge.\n\nLH spike releases the egg.\n\nSigns someone might feel:\n\nIncrease in sex drive\n\nClear, stretchy “egg-white” cervical mucus\n\nSlight rise in basal body temperature\n\nMild ovary pain (called mittelschmerz)\n\nOvulation is the only time pregnancy can occur in the cycle.` 
+        description: `### What happens:\n\nThe LH surge causes the mature follicle to burst, releasing an egg.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\nThe egg enters the fallopian tube and waits for possible fertilization.\n\n### Fertility:\n\nEgg survives 12–24 hours once released.\n\nSperm can survive up to 5 days, so fertility is highest in the days before ovulation.\n\n### Hormones:\n\nEstrogen reaches its highest level → triggers LH surge.\n\nLH spike releases the egg.\n\n### Signs someone might feel:\n\nIncrease in sex drive\n\nClear, stretchy “egg-white” cervical mucus\n\nSlight rise in basal body temperature\n\nMild ovary pain (called mittelschmerz)\n\nOvulation is the only time pregnancy can occur in the cycle.` 
     },
     { 
         name: 'Luteal', 
         color: 'bg-pink-400/30',
         title: "Luteal Phase (Days ~15–28)",
-        description: `What happens:\n\nThe empty follicle becomes the corpus luteum\n\nIt releases progesterone and some estrogen.\n\nProgesterone thickens the uterine lining even more and keeps it stable.\n\nIf NO pregnancy occurs:\n\nThe corpus luteum breaks down after ~14 days.\n\nProgesterone and estrogen drop.\n\nThe drop triggers the uterus to shed its lining → next period starts.\n\nIf pregnancy DOES occur:\n\nThe body produces hCG (pregnancy hormone) to keep the corpus luteum alive.\n\nProgesterone stays high.\n\nNo period occurs.\n\nCommon PMS symptoms during luteal phase:\n\nBloating\n\nBreast tenderness\n\nIrritability or mood swings\n\nHeadaches\n\nCravings\n\nAcne` 
+        description: `### What happens:\n\nThe empty follicle becomes the corpus luteum\n\nIt releases progesterone and some estrogen.\n\nProgesterone thickens the uterine lining even more and keeps it stable.\n\n### If NO pregnancy occurs:\n\nThe corpus luteum breaks down after ~14 days.\n\nProgesterone and estrogen drop.\n\nThe drop triggers the uterus to shed its lining → next period starts.\n\n### If pregnancy DOES occur:\n\nThe body produces hCG (pregnancy hormone) to keep the corpus luteum alive.\n\nProgesterone stays high.\n\nNo period occurs.\n\n### Common PMS symptoms during luteal phase:\n\nBloating\n\nBreast tenderness\n\nIrritability or mood swings\n\nHeadaches\n\nCravings\n\nAcne` 
     },
 ];
 
@@ -432,8 +432,17 @@ export function ActivityTracker() {
                                         <DialogTitle>{phase.title}</DialogTitle>
                                     </DialogHeader>
                                     <ScrollArea className="h-96">
-                                        <div className="prose prose-sm max-w-none whitespace-pre-wrap dark:prose-invert p-4">
-                                            {phase.description}
+                                        <div className="prose prose-sm prose-p:my-1 prose-headings:my-2 max-w-none whitespace-pre-wrap dark:prose-invert p-4">
+                                            {phase.description.split('\n\n').map((paragraph, pIndex) => (
+                                                <p key={pIndex}>
+                                                    {paragraph.split('\n').map((line, lIndex) => {
+                                                        if (line.startsWith('### ')) {
+                                                            return <strong key={lIndex} className="block font-bold mt-2">{line.substring(4)}</strong>;
+                                                        }
+                                                        return <React.Fragment key={lIndex}>{line}<br /></React.Fragment>;
+                                                    })}
+                                                </p>
+                                            ))}
                                         </div>
                                     </ScrollArea>
                                 </DialogContent>
@@ -508,3 +517,5 @@ export function ActivityTracker() {
     </div>
   );
 }
+
+    
