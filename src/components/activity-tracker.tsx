@@ -28,6 +28,7 @@ import { Carousel, CarouselContent, CarouselItem } from './ui/carousel';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { ScrollArea } from './ui/scroll-area';
 
 
 const mockHourlyData = [
@@ -426,13 +427,15 @@ export function ActivityTracker() {
                                         <span>{phase.name}</span>
                                     </div>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="sm:max-w-md">
                                     <DialogHeader>
                                         <DialogTitle>{phase.title}</DialogTitle>
                                     </DialogHeader>
-                                    <div className="prose prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
-                                        {phase.description}
-                                    </div>
+                                    <ScrollArea className="h-96">
+                                        <div className="prose prose-sm max-w-none whitespace-pre-wrap dark:prose-invert p-4">
+                                            {phase.description}
+                                        </div>
+                                    </ScrollArea>
                                 </DialogContent>
                             </Dialog>
                         ))}
