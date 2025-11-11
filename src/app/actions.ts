@@ -6,6 +6,11 @@ import {
   type GeneratePersonalizedWorkoutPlanOutput,
 } from '@/ai/flows/personalized-workout-plan';
 import {
+  getStructuredDailyWorkout,
+  type StartDailyWorkoutInput,
+  type StartDailyWorkoutOutput,
+} from '@/ai/flows/daily-workout';
+import {
   analyzeFood,
 } from '@/ai/ai-food-logger';
 import {
@@ -49,6 +54,18 @@ export async function getWorkoutPlan(
     return { success: false, data: null, error: 'An unexpected error occurred while generating your workout plan. Please try again later.' };
   }
 }
+
+export async function getDailyWorkout(
+    input: StartDailyWorkoutInput
+  ): Promise<{ success: boolean; data: StartDailyWorkoutOutput | null; error: string | null }> {
+    try {
+      const dailyWorkout = await getStructuredDailyWorkout(input);
+      return { success: true, data: dailyWorkout, error: null };
+    } catch (e) {
+      console.error(e);
+      return { success: false, data: null, error: 'An unexpected error occurred while generating the daily workout. Please try again.' };
+    }
+  }
 
 export async function getFoodAnalysis(
   query: AnalyzeFoodInput

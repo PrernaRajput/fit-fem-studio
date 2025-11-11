@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { getDailyWorkout } from '../actions';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const defaultExercises = [
     {
@@ -61,77 +64,6 @@ type Exercise = {
   imageHint: string;
 };
 
-// This function will parse the text for a given day into structured exercise data.
-// It's designed to be robust against variations in the AI's output format.
-function parseTodaysWorkout(plan: string, today: string): Exercise[] {
-    const dayRegex = new RegExp(`(?:\\*\\*)?${today}(?:\\*\\*)?:?([\\s\\S]*?)(?=(?:\\*\\*)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Dietary Guidelines|Justification)(?:\\*\\*)?:?|$)`, 'i');
-    const match = plan.match(dayRegex);
-
-    if (!match || !match[1] || match[1].trim().toLowerCase().includes('rest')) {
-        return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
-    }
-
-    const todaysPlan = match[1];
-    const exercises: Exercise[] = [];
-    
-    const lines = todaysPlan.split('\n').filter(line => line.trim().length > 0 && (line.includes('*') || line.includes('-')));
-
-    for (const line of lines) {
-        // Clean up the line: remove markdown like '*' or leading '-'
-        let cleanedLine = line.replace(/(\*|-)\s*/, '').trim();
-
-        // Extract exercise name (part before colon or parenthesis)
-        const nameMatch = cleanedLine.match(/^(.*?)(?:\s*\(|:)/);
-        const name = nameMatch ? nameMatch[1].trim().replace(/\*+/g, '') : cleanedLine.replace(/\*+/g, '');
-        if (!name) continue;
-
-        let duration = 45; // Default duration
-
-        // Try to find duration like "(30 seconds)"
-        const durationMatch = cleanedLine.match(/\((\d+)\s*seconds?\)/i);
-        if (durationMatch) {
-            duration = parseInt(durationMatch[1], 10);
-        }
-
-        const defaultExercise = defaultExercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
-
-        exercises.push({
-            name,
-            duration,
-            gifUrl: defaultExercise?.gifUrl || `https://picsum.photos/seed/${name.replace(/\s/g, '')}/600/400`,
-            youtubeUrl: defaultExercise?.youtubeUrl || '',
-            calories: Math.floor(duration * 0.7), // Rough calorie estimate
-            imageHint: defaultExercise?.imageHint || name.toLowerCase(),
-        });
-
-        // Add a rest period after each exercise
-        exercises.push({
-            name: 'Rest',
-            duration: 15,
-            gifUrl: 'https://picsum.photos/seed/rest/600/400',
-            youtubeUrl: '',
-            calories: 0,
-            imageHint: 'woman resting',
-        });
-    }
-
-    // Remove the last rest period if it exists
-    if (exercises.length > 0 && exercises[exercises.length - 1].name === 'Rest') {
-        exercises.pop();
-    }
-    
-    if (exercises.length === 0) {
-      if (todaysPlan.trim().length > 0 && !todaysPlan.trim().toLowerCase().includes('rest')) {
-          // Fallback if parsing fails but there's content.
-          return defaultExercises;
-      }
-      // If no exercises were found, it's a rest day.
-      return [{ name: 'Rest Day', duration: 0, gifUrl: '', youtubeUrl: '', calories: 0, imageHint: 'relaxing' }];
-    }
-
-    return exercises;
-}
-
 
 export default function WorkoutPage() {
   const { user, isLoading: isUserLoading } = useUser();
@@ -145,40 +77,73 @@ export default function WorkoutPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   const [todaysExercises, setTodaysExercises] = useState<Exercise[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isRestDay, setIsRestDay] = useState(false);
 
   useEffect(() => {
-    // This effect runs whenever the profile data from Firestore changes.
-    if (isUserLoading || isProfileLoading) {
-      // Still loading, do nothing until data is ready.
-      // Setting state to null will keep the loading screen up.
-      setTodaysExercises(null);
-      return;
+    const fetchDailyWorkout = async () => {
+      if (isUserLoading || isProfileLoading) return;
+
+      const plan = userProfile?.weeklyWorkoutPlan;
+      
+      if (plan) {
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const result = await getDailyWorkout({ weeklyWorkoutPlan: plan, today });
+
+        if (result.success && result.data) {
+            if (!result.data.workoutExists) {
+                setIsRestDay(true);
+                setTodaysExercises([]);
+            } else {
+                const mappedExercises: Exercise[] = result.data.steps.map(step => ({
+                    name: step.set ? `${step.name} (Set ${step.set})` : step.name,
+                    duration: step.duration,
+                    gifUrl: `https://picsum.photos/seed/${step.name.replace(/\s/g, '')}/600/400`,
+                    youtubeUrl: '',
+                    calories: step.isRest ? 0 : Math.floor(step.duration * 0.7),
+                    imageHint: step.name.toLowerCase(),
+                }));
+                setTodaysExercises(mappedExercises);
+                setIsRestDay(false);
+            }
+        } else {
+            setError(result.error || "Failed to parse workout. Using default.");
+            setTodaysExercises(defaultExercises);
+        }
+      } else {
+        // If no plan is in firestore, use the default workout
+        setTodaysExercises(defaultExercises);
+      }
     };
-    
-    const plan = userProfile?.weeklyWorkoutPlan;
-    if (plan) {
-      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      const parsedExercises = parseTodaysWorkout(plan, today);
-      setTodaysExercises(parsedExercises);
-    } else {
-      // If no plan is in firestore, use the default workout
-      setTodaysExercises(defaultExercises);
-    }
+
+    fetchDailyWorkout();
   }, [userProfile, isUserLoading, isProfileLoading]);
 
   // Unified loading state
-  const isLoading = todaysExercises === null;
+  const isLoading = todaysExercises === null && !isRestDay;
 
 
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-dvh bg-background items-center justify-center">
-        <p>Loading your workout...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4">Loading your workout...</p>
+      </div>
+    );
+  }
+
+  if (error && !isLoading) {
+    return (
+      <div className="flex flex-col min-h-dvh bg-background items-center justify-center p-4">
+        <Alert variant="destructive">
+          <AlertTitle>Error Loading Workout</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
     );
   }
   
-  if (!todaysExercises || todaysExercises.length === 0 || (todaysExercises.length === 1 && todaysExercises[0].name === 'Rest Day')) {
+  if (isRestDay) {
     return (
        <div className="flex flex-col min-h-dvh bg-background">
         <main className="flex-1 py-8 flex items-center justify-center">
@@ -204,7 +169,13 @@ export default function WorkoutPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-background">
       <main className="flex-1 py-8">
-        <WorkoutRoutine initialExercises={todaysExercises} />
+        {todaysExercises && todaysExercises.length > 0 ? (
+          <WorkoutRoutine initialExercises={todaysExercises} />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p>No exercises found for today.</p>
+          </div>
+        )}
       </main>
       <Footer />
     </div>
