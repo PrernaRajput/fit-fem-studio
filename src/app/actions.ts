@@ -3,12 +3,9 @@
 import {
   generatePersonalizedWorkoutPlan,
   type GeneratePersonalizedWorkoutPlanInput,
-  type GeneratePersonalizedWorkoutPlanOutput,
 } from '@/ai/flows/personalized-workout-plan';
 import {
   getStructuredDailyWorkout,
-  type StartDailyWorkoutInput,
-  type StartDailyWorkoutOutput,
 } from '@/ai/flows/daily-workout';
 import {
   analyzeFood,
@@ -37,7 +34,7 @@ const workoutPlanSchema = z.object({
 
 export async function getWorkoutPlan(
   data: GeneratePersonalizedWorkoutPlanInput
-): Promise<{ success: boolean; data: GeneratePersonalizedWorkoutPlanOutput | null; error: string | null | z.ZodIssue[] }> {
+) {
   const validation = workoutPlanSchema.safeParse(data);
   if (!validation.success) {
     return { success: false, data: null, error: validation.error.issues };
@@ -55,9 +52,14 @@ export async function getWorkoutPlan(
   }
 }
 
+const dailyWorkoutInputSchema = z.object({
+    weeklyWorkoutPlan: z.string(),
+    today: z.string(),
+});
+
 export async function getDailyWorkout(
-    input: StartDailyWorkoutInput
-  ): Promise<{ success: boolean; data: StartDailyWorkoutOutput | null; error: string | null }> {
+    input: z.infer<typeof dailyWorkoutInputSchema>
+  ) {
     try {
       const dailyWorkout = await getStructuredDailyWorkout(input);
       return { success: true, data: dailyWorkout, error: null };
@@ -65,7 +67,7 @@ export async function getDailyWorkout(
       console.error(e);
       return { success: false, data: null, error: 'An unexpected error occurred while generating the daily workout. Please try again.' };
     }
-  }
+}
 
 export async function getFoodAnalysis(
   query: AnalyzeFoodInput

@@ -98,9 +98,9 @@ export default function WorkoutPage() {
                 const mappedExercises: Exercise[] = result.data.steps.map(step => ({
                     name: step.set ? `${step.name} (Set ${step.set})` : step.name,
                     duration: step.duration,
-                    gifUrl: `https://picsum.photos/seed/${step.name.replace(/\s/g, '')}/600/400`,
+                    gifUrl: step.gifUrl || `https://picsum.photos/seed/${step.name.replace(/\s/g, '')}/600/400`,
                     youtubeUrl: '',
-                    calories: step.isRest ? 0 : Math.floor(step.duration * 0.7),
+                    calories: Math.floor(step.duration * 0.7),
                     imageHint: step.name.toLowerCase(),
                 }));
                 setTodaysExercises(mappedExercises);

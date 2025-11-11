@@ -11,10 +11,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const startDailyWorkoutPrompt = `
-You are an expert fitness trainer that executes workouts step–by–step.
+You are an expert fitness trainer AI that runs workouts step-by-step.
 
 You will receive:
-1. The user's previously generated weekly workout plan (as text or JSON).
+1. The user's stored weekly workout plan (as text or JSON).
 2. Today's day of the week (e.g., Monday).
 
 Goal:
@@ -72,8 +72,6 @@ const StartDailyWorkoutInputSchema = z.object({
   today: z.string().describe("The current day of the week, e.g., 'Monday'."),
 });
 
-export type StartDailyWorkoutInput = z.infer<typeof StartDailyWorkoutInputSchema>;
-
 const WorkoutStepSchema = z.object({
     type: z.enum(['warmup', 'exercise_set', 'rest']).describe('The type of step.'),
     name: z.string().describe('The name of the step (e.g., "Jumping Jacks", "Rest").'),
@@ -88,8 +86,6 @@ const StartDailyWorkoutOutputSchema = z.object({
   workoutExists: z.boolean().describe("Whether a workout exists for the specified day."),
   steps: z.array(WorkoutStepSchema).describe('A list of steps for the daily workout.'),
 });
-
-export type StartDailyWorkoutOutput = z.infer<typeof StartDailyWorkoutOutputSchema>;
 
 
 const dailyWorkoutPrompt = ai.definePrompt({
@@ -113,7 +109,7 @@ const startDailyWorkoutFlow = ai.defineFlow(
 );
 
 export async function getStructuredDailyWorkout(
-  input: StartDailyWorkoutInput
-): Promise<StartDailyWorkoutOutput> {
+  input: z.infer<typeof StartDailyWorkoutInputSchema>
+): Promise<z.infer<typeof StartDailyWorkoutOutputSchema>> {
   return startDailyWorkoutFlow(input);
 }
